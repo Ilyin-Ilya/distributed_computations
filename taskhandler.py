@@ -1,5 +1,5 @@
 from threading import Lock
-from time import time, time_ns
+from time import time
 from typing import Callable, List
 from dataclasses import dataclass
 from threading import Thread
@@ -12,7 +12,8 @@ class Task:
 
 
 class TaskHandler:
-    def __init__(self, ):
+    def __init__(self, name=""):
+        self.name = name
         self.is_instant_stop = False
         self.task_lock = Lock()
         self.start_lock = Lock()
@@ -32,6 +33,19 @@ class TaskHandler:
 
     def wait(self):
         self.thread.join()
+
+    def schedule_action(self, action: Callable, delay: float = None) -> bool:
+        task = Task(
+            action,
+            delay
+        )
+        return self.schedule_task(task)
+
+    def __has_scheduled_or_pending_tasks__(self) -> bool:
+        return not (not self.scheduled_instant_task and
+                    not self.scheduled_delayed_tasks and
+                    not self.pending_instant_tasks and
+                    not self.pending_delayed_tasks)
 
     def schedule_task(self, task: Task) -> bool:
         if not self.is_finished:
@@ -67,9 +81,8 @@ class TaskHandler:
 
     def __start_action__(self):
         self.__synchronize_with_pending_tasks__()
-        while \
-                not (not self.scheduled_instant_task and not self.scheduled_delayed_tasks and self.is_finished) \
-                        and not self.is_instant_stop:
+        while (self.__has_scheduled_or_pending_tasks__() or not self.is_finished) \
+                and not self.is_instant_stop:
             if self.pause_time is not None:
                 continue
             new_delayed_tasks = []
@@ -87,7 +100,6 @@ class TaskHandler:
             self.scheduled_delayed_tasks = new_delayed_tasks
             self.scheduled_instant_task = []
             self.__synchronize_with_pending_tasks__()
-        print("Before exit")
 
     def __synchronize_with_pending_tasks__(self):
         with self.task_lock:
