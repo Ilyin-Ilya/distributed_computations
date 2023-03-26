@@ -7,7 +7,7 @@ from threading import Lock
 class AbstractChannel:
     def __init__(self):
         self.handler_lock = Lock()
-        self.task_handler = TaskHandler("Chanel")
+        self.task_handler = TaskHandler("Channel")
 
     def perform_message_delivery_actions(self, send_message_callback, message):
         pass

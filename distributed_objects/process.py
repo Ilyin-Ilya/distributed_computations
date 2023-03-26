@@ -1,6 +1,5 @@
-from dataclasses import dataclass
 from typing import final, List
-from distibuted_system import DistributedSystem
+from taskhandler import TaskHandler
 
 
 class ChannelCommunicationProvider:
@@ -11,7 +10,8 @@ class ChannelCommunicationProvider:
 
 class AbstractProcess:
     def __init__(self):
-        self.channel_communication_provider: ChannelCommunicationProvider = None
+        self.channel_communication_provider: ChannelCommunicationProvider | None = None
+        self.task_handler = TaskHandler("Channel")
 
     def set_channel_communication_provider(self, channel_communication_provider: ChannelCommunicationProvider):
         self.channel_communication_provider = channel_communication_provider
@@ -25,8 +25,31 @@ class AbstractProcess:
     def is_in_terminal_state(self) -> bool:
         pass
 
-    def on_receive_message(self, message) -> None:
+    def on_receive_message(self, message):
+        """
+        Implement this method with actual algorithm running on the node
+        """
         pass
+
+    @final
+    def receive_message(self, message):
+        self.task_handler \
+            .schedule_action(lambda: self.on_receive_message(message))
+
+    @final
+    def pause(self):
+        self.task_handler.pause()
+
+    @final
+    def unpause(self):
+        self.task_handler.unpause()
+
+    @final
+    def stop(self, is_instant=False):
+        if is_instant:
+            self.task_handler.instant_stop()
+        else:
+            self.task_handler.stop()
 
     @final
     def send_message(self, receiver_id, message):
@@ -39,13 +62,13 @@ class AbstractProcess:
         return self.channel_communication_provider.get_available_process_id()
 
 
-class SimpleProcess(AbstractProcess):
-    def __init__(self, id):
+class SimpleEcoProcess(AbstractProcess):
+    def __init__(self, process_id):
         super().__init__()
-        self.id = id
+        self.process_id = process_id
 
     def get_id(self):
-        return self.id
+        return self.process_id
 
     def is_init_process(self):
         return False
@@ -53,6 +76,6 @@ class SimpleProcess(AbstractProcess):
     def is_in_terminal_state(self) -> bool:
         return False
 
-    def on_receive_message(self, message) -> None:
+    def on_receive_message(self, message):
         for receiver_id in self.channel_communication_provider.get_available_process_id():
             self.channel_communication_provider.send_message(receiver_id, message)
