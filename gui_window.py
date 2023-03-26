@@ -2,7 +2,7 @@ from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDesktopWidget, QFileDialog, QAction, QWidget, QLabel, QComboBox, \
     QGridLayout, QLineEdit, QGroupBox, QVBoxLayout
 from PyQt5.QtGui import QPainter, QPen, QBrush, QPolygon, QFont, QPainterPath, QColor
-from PyQt5.QtCore import QPoint, QLine, QRect, QLineF, QTimer, QCoreApplication, QThread, pyqtSignal
+from PyQt5.QtCore import QPoint, QLine, QRect, QLineF, QTimer, QCoreApplication, QThread, pyqtSignal, QMetaObject
 from PyQt5.QtCore import Qt
 import math
 import copy
@@ -11,7 +11,7 @@ import csv
 import os
 import sys
 
-message_delay = 10
+message_delay = 1000
 
 def divide_line(line, n):
     # Calculate the length of the line
@@ -34,17 +34,6 @@ def divide_line(line, n):
 
     return points
 
-class MessageTraveller(QThread):
-    message_changed = pyqtSignal()
-
-    def __init__(self, message):
-        super(MessageTraveller, self).__init__()
-        self.message = message
-
-    def run(self):
-        while True:
-            self.message_changed.emit()
-            time.sleep(1)
 
 class Message(QWidget):
     def __init__(self, sender, recipient, size, parent = None):
@@ -62,6 +51,25 @@ class Message(QWidget):
         print(line.center())
         self.points = divide_line(line, message_delay)
         self.cur_point = 0
+        self.envelopes = []
+        self.arrows = []
+        for i in range(len(self.points)):
+            envelope_path = QPainterPath()
+            envelope_path.moveTo(self.points[i].x(), self.points[i].y())
+            envelope_path.lineTo(self.points[i].x() - 25, self.points[i].y())
+            envelope_path.lineTo(self.points[i].x() - 25, self.points[i].y() - 50)
+            envelope_path.lineTo(self.points[i].x() + 25, self.points[i].y() - 50)
+            envelope_path.lineTo(self.points[i].x() + 25, self.points[i].y())
+
+            envelope_path.lineTo(self.points[i].x(), self.points[i].y())
+            self.envelopes.append(envelope_path)
+
+            # Draw arrow shape
+            arrow_path = QPainterPath()
+            arrow_path.moveTo(self.points[i].x() - 20, self.points[i].y() - 40)
+            arrow_path.lineTo(self.points[i].x(), self.points[i].y() - 20)
+            arrow_path.lineTo(self.points[i].x() + 20, self.points[i].y() - 40)
+            self.arrows.append(arrow_path)
 
         print(self.points)
 
@@ -76,12 +84,8 @@ class Message(QWidget):
             painter.setPen(envelope_pen)
             painter.setBrush(envelope_brush)
             # Draw envelope shape
-            print("drawing message")
-            print(self.cur_point)
             self.point = self.points[self.cur_point]
-            print(self.point)
             self.draw_message(painter)
-            painter.end()
             self.update_position()
 
     def update_position(self):
@@ -98,13 +102,6 @@ class Message(QWidget):
         self.cur_point = self.cur_point + 1
 
         if self.point is None:
-            if self.parent() is not None and self.parent().layout() is not None:
-                print("checks passed")
-
-            if self.parent() is not None and self.parent().layout() is not None and self.parent().layout().indexOf(
-                    self) != -1:
-                print("second check passed")
-
             timer = QTimer(self)
             timer.setSingleShot(True)
 
@@ -115,29 +112,13 @@ class Message(QWidget):
             timer.start(2000)
 
     def draw_message(self, painter):
-        envelope_path = QPainterPath()
-        envelope_path.moveTo(self.point.x(), self.point.y())
-        envelope_path.lineTo(self.point.x() - 25, self.point.y())
-        envelope_path.lineTo(self.point.x() - 25, self.point.y() - 50)
-        envelope_path.lineTo(self.point.x() + 25, self.point.y() - 50)
-        envelope_path.lineTo(self.point.x() + 25, self.point.y())
-
-        envelope_path.lineTo(self.point.x(), self.point.y())
-
-        painter.drawPath(envelope_path)
-
+        painter.drawPath(self.envelopes[self.cur_point])
         # Set pen and brush for the arrow shape
         arrow_pen = QPen(QColor(0, 0, 0))
         arrow_brush = QBrush(QColor(0, 0, 0))
         painter.setPen(arrow_pen)
         painter.setBrush(arrow_brush)
-
-        # Draw arrow shape
-        arrow_path = QPainterPath()
-        arrow_path.moveTo(self.point.x() - 20, self.point.y() - 40)
-        arrow_path.lineTo(self.point.x(), self.point.y() - 20)
-        arrow_path.lineTo(self.point.x() + 20, self.point.y() - 40)
-        painter.drawPath(arrow_path)
+        painter.drawPath(self.arrows[self.cur_point])
 
     def stop(self):
         self.stopped = True
@@ -218,11 +199,12 @@ class Window(QMainWindow):
         self.is_graph_uploaded = True
         self.fill_labels()
         self.paint_menu_window()
-        message = Message(self.vertexes[1], self.vertexes[2], [self.window.width(), self.window.height()], self)
-        self.layout().addWidget(message)
-        self.thread = MessageTraveller(message)
-        self.thread.message_changed.connect(self.update)
-        self.thread.start()
+        self.message = Message(self.vertexes[1], self.vertexes[2], [self.window.width(), self.window.height()])
+        self.layout().addWidget(self.message)
+        for i in range(message_delay):
+            print(i)
+            self.update()
+            QApplication.processEvents()
         #timer = QTimer(self)
         #timer.setSingleShot(True)
         #self.layout().removeWidget(message)
@@ -342,11 +324,11 @@ class Window(QMainWindow):
 
         rect = QRect(self.all_width - self.menu_width, 0, self.menu_width, self.menu_height)
 
-        widget = QWidget()
-        widget.setLayout(layout)
-        widget.setGeometry(rect)
+        self.menu = QWidget()
+        self.menu.setLayout(layout)
+        self.menu.setGeometry(rect)
 
-        self.layout().addWidget(widget)
+        self.layout().addWidget(self.menu)
 
     def fill_labels(self):
         self.vertexes = []
