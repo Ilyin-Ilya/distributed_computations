@@ -27,8 +27,12 @@ class ChannelInfoHolder:
         self.communication_dict = {}
 
     def get_channel_for(self, sender_id, receiver_id) -> ChannelWrapper | None:
-        channel = self.communication_dict[sender_id][receiver_id]
-        return channel if channel is ChannelWrapper else None
+        receiver_dict = self.communication_dict.get(sender_id)
+        if receiver_dict:
+            channel = receiver_dict.get(receiver_id)
+            return channel if isinstance(channel, ChannelWrapper) else None
+        else:
+            return None
 
     def get_available_channels_for(self, sender_id) -> List[ChannelWrapper]:
         channels = self.communication_dict[sender_id]
@@ -110,7 +114,7 @@ class CommunicationHelper:
 
     def get_channel_for(self, sender_id, receiver_id) -> AbstractChannel | None:
         channel = self.channel_info_holder.get_channel_for(sender_id, receiver_id)
-        return channel if channel is ChannelWrapper and channel.inner_channel is not None else None
+        return channel if isinstance(channel, ChannelWrapper) and channel.inner_channel is not None else None
 
     def get_available_receivers_id_for(self, sender_id) -> List:
         return self.channel_info_holder.get_available_receiver_id_for(sender_id)

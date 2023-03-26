@@ -73,10 +73,11 @@ class SimpleDelayChannel(AbstractChannel):
             return
 
         self.start()
-
+        random_value = random.random()
+        random_delay = self.delay_range[0] + (self.delay_range[1] - self.delay_range[0]) * random_value
         message_delivery_task = Task(
             lambda: send_message_callback(message),
-            random.randint(self.delay_range[0], self.delay_range[1])
+            random_delay
         )
         self.task_handler.schedule_task(message_delivery_task)
 

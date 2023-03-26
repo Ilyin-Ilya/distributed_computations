@@ -85,7 +85,7 @@ class AbstractProcess:
         return self.channel_communication_provider.get_available_process_id()
 
 
-class SimpleEcoProcess(AbstractProcess):
+class SimpleEchoProcess(AbstractProcess):
     def __init__(self, process_id):
         super().__init__()
         self.process_id = process_id
