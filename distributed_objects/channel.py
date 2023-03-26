@@ -58,3 +58,40 @@ class SimpleDelayChannel(AbstractChannel):
             if self.task_handler is None:
                 self.task_handler = TaskHandler()
             self.task_handler.start()
+
+
+class ChannelWrapper(AbstractChannel):
+    def __init__(self, channel: AbstractChannel, sender_id=None, receiver_id=None):
+        self.inner_channel = channel
+        self.sender_id = sender_id
+        self.receiver_id = receiver_id
+
+    def get_sender_id(self):
+        return self.sender_id
+
+    def get_receiver_id(self):
+        return self.receiver_id
+
+    def set_sender_id(self, sender_id):
+        self.sender_id = sender_id
+
+    def set_receiver_id(self, receiver_id):
+        self.receiver_id = receiver_id
+
+    def perform_message_delivery_actions(self, send_message_callback, message):
+        self.inner_channel.perform_message_delivery_actions(send_message_callback, message)
+
+    def start(self):
+        self.inner_channel.start()
+
+    def __debug_wait__(self):
+        self.inner_channel.__debug_wait__()
+
+    def stop(self, is_instant=False):
+        self.inner_channel.stop(is_instant)
+
+    def pause(self):
+        self.inner_channel.pause()
+
+    def unpause(self):
+        self.inner_channel.unpause()
