@@ -11,7 +11,7 @@
 from distributed_process import DistributedProcess
 from distributed_initializer import DistributedInitializer
 from messaging_system import MessagingSystem
-
+import gui_window
 
 def get_neighbors_of_process(process_id, graph):
     neighbors = []
@@ -33,7 +33,6 @@ if __name__ == '__main__':
     for i in range(len(test_graph)):
         processes.append(DistributedProcess(i, get_neighbors_of_process(i, test_graph)))
 
-    messaging_system = MessagingSystem(test_graph, processes)
-    
+    gui_window.application_start()
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
