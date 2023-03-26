@@ -4,8 +4,6 @@ from typing import Dict, Any, List
 
 
 class ChannelInfoHolder:
-    channel_placeholder = "No channel"
-
     def __init__(self):
         self.communication_dict: Dict[Any, Dict[Any, ChannelWrapper]] = {}
 
@@ -14,6 +12,16 @@ class ChannelInfoHolder:
             self.communication_dict.get(sender_id)[receiver_id] = ChannelWrapper(channel, sender_id, receiver_id)
         else:
             self.communication_dict[sender_id] = {receiver_id: ChannelWrapper(channel, sender_id, receiver_id)}
+
+    def remove_channel(self, sender_id, receiver_id):
+        channels = self.communication_dict.get(sender_id)
+        if channels:
+            channels.pop(receiver_id, None)
+
+    def remove_process(self, process_id):
+        self.communication_dict.pop(process_id, None)
+        for dict in self.communication_dict.values():
+            dict.pop(process_id, None)
 
     def clear_channels(self):
         self.communication_dict = {}
@@ -49,6 +57,9 @@ class ProcessInfoHolder:
 
     def set_placeholder(self, process_id):
         self.processes_dictionary[process_id] = ProcessInfoHolder.process_placeholder
+
+    def remove_process(self, process_id):
+        self.processes_dictionary.pop(process_id, None)
 
     def clear_processes(self):
         self.processes_dictionary = {}
@@ -98,16 +109,33 @@ class CommunicationHelper:
         return not not_set_processes_with_id and not not_set_channels and not not_found_process_id
 
     def get_channel_for(self, sender_id, receiver_id) -> AbstractChannel | None:
-        return self.channel_info_holder.get_channel_for(sender_id, receiver_id)
+        channel = self.channel_info_holder.get_channel_for(sender_id, receiver_id)
+        return channel if channel is ChannelWrapper and channel.inner_channel is not None else None
+
+    def get_available_receivers_id_for(self, sender_id) -> List:
+        return self.channel_info_holder.get_available_receiver_id_for(sender_id)
+
+    def get_all_channels(self) -> List[AbstractChannel]:
+        return self.channel_info_holder.get_all_channels()
+
+    def get_all_processes(self) -> List[AbstractProcess]:
+        return self.process_info_holder.get_all_processes()
 
     def set_channel_for(self, channel: AbstractChannel, sender_id, receiver_id):
         self.channel_info_holder.set_channel_for(sender_id, receiver_id, channel)
+
+    def remove_channel_for(self, sender_id, receiver_id):
+        self.channel_info_holder.remove_channel(sender_id, receiver_id)
 
     def get_process_with_id(self, process_id) -> AbstractProcess | None:
         return self.process_info_holder.get_process(process_id)
 
     def set_process(self, process: AbstractProcess):
         self.process_info_holder.set_process(process)
+
+    def remove_process(self, process_id):
+        self.process_info_holder.remove_process(process_id)
+        self.channel_info_holder.remove_process(process_id)
 
     def create_graph_file(self, path):
         """
