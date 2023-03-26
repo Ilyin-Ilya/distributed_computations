@@ -8,7 +8,6 @@
 # 1. Create instances distributed-initializer, distributed-process
 # 2.
 
-from distributed_process import DistributedProcess
 from distributed_initializer import DistributedInitializer
 from messaging_system import MessagingSystem
 import gui_window
@@ -29,9 +28,6 @@ if __name__ == '__main__':
                   [1, 1, 1, 1],
                   [1, 1, 1, 1],
                   [1, 1, 1, 1]]
-    processes = []
-    for i in range(len(test_graph)):
-        processes.append(DistributedProcess(i, get_neighbors_of_process(i, test_graph)))
 
     gui_window.application_start()
 
