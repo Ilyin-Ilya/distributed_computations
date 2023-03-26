@@ -2,6 +2,7 @@ import random
 
 from taskhandler import TaskHandler, Task
 from threading import Lock
+from typing import final
 
 
 class AbstractChannel:
@@ -9,12 +10,22 @@ class AbstractChannel:
         self.handler_lock = Lock()
         self.task_handler = TaskHandler("Channel")
 
-    def perform_message_delivery_actions(self, send_message_callback, message):
+    def deliver_message(self, send_message_callback, message):
         pass
 
     def start(self):
         pass
 
+    def disable(self):
+        pass
+
+    def enable(self):
+        pass
+
+    def get_current_state_information(self):
+        return "No state information"
+
+    @final
     def __debug_wait__(self):
         if self.task_handler is not None:
             self.task_handler.wait()
@@ -23,6 +34,7 @@ class AbstractChannel:
     Should call stop when want to properly stop channel 
     """
 
+    @final
     def stop(self, is_instant=False):
         if self.task_handler is not None:
             if is_instant:
@@ -30,10 +42,12 @@ class AbstractChannel:
             else:
                 self.task_handler.stop()
 
+    @final
     def pause(self):
         if self.task_handler is not None:
             self.task_handler.pause()
 
+    @final
     def unpause(self):
         if self.task_handler is not None:
             self.task_handler.unpause()
@@ -43,8 +57,21 @@ class SimpleDelayChannel(AbstractChannel):
     def __init__(self, delay_range):
         super().__init__()
         self.delay_range = delay_range
+        self.is_enabled = True
+        self.is_enabled_lock = Lock()
 
-    def perform_message_delivery_actions(self, send_message_callback, message):
+    def disable(self):
+        with self.is_enabled_lock:
+            self.is_enabled = False
+
+    def enable(self):
+        with self.is_enabled_lock:
+            self.is_enabled = True
+
+    def deliver_message(self, send_message_callback, message):
+        if not self.is_enabled:
+            return
+
         self.start()
 
         message_delivery_task = Task(
@@ -78,11 +105,14 @@ class ChannelWrapper(AbstractChannel):
     def set_receiver_id(self, receiver_id):
         self.receiver_id = receiver_id
 
-    def perform_message_delivery_actions(self, send_message_callback, message):
-        self.inner_channel.perform_message_delivery_actions(send_message_callback, message)
+    def deliver_message(self, send_message_callback, message):
+        self.inner_channel.deliver_message(send_message_callback, message)
 
     def start(self):
         self.inner_channel.start()
+
+    def get_current_state_information(self):
+        return self.inner_channel.get_current_state_information()
 
     def __debug_wait__(self):
         self.inner_channel.__debug_wait__()
@@ -95,3 +125,9 @@ class ChannelWrapper(AbstractChannel):
 
     def unpause(self):
         self.inner_channel.unpause()
+
+    def disable(self):
+        self.inner_channel.disable()
+
+    def enable(self):
+        self.inner_channel.enable()

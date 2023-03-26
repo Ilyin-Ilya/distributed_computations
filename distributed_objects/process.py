@@ -1,5 +1,6 @@
 from typing import final, List
 from taskhandler import TaskHandler
+from threading import Lock
 
 
 class ChannelCommunicationProvider:
@@ -9,9 +10,13 @@ class ChannelCommunicationProvider:
 
 
 class AbstractProcess:
+    kick_off_message = "Start initially"
+
     def __init__(self):
         self.channel_communication_provider: ChannelCommunicationProvider | None = None
         self.task_handler = TaskHandler("Channel")
+        self.is_enabled = True
+        self.is_disabled_lock = Lock()
 
     def set_channel_communication_provider(self, channel_communication_provider: ChannelCommunicationProvider):
         self.channel_communication_provider = channel_communication_provider
@@ -31,10 +36,28 @@ class AbstractProcess:
         """
         pass
 
+    def get_current_state_information(self):
+        return "No state information"
+
+    @final
+    def disable(self):
+        with self.is_disabled_lock:
+            self.is_enabled = False
+
+    @final
+    def enable(self):
+        with self.is_disabled_lock:
+            self.is_enabled = True
+
     @final
     def receive_message(self, message):
-        self.task_handler \
-            .schedule_action(lambda: self.on_receive_message(message))
+        if self.is_enabled:
+            self.task_handler \
+                .schedule_action(lambda: self.on_receive_message(message))
+
+    @final
+    def start(self):
+        self.task_handler.start()
 
     @final
     def pause(self):
