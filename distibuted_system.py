@@ -88,7 +88,7 @@ class DistributedSystem:
         if channel:
             channel.enable()
 
-    def __set_channel__(self, sender_id, receiver_id, channel: AbstractChannel):
+    def __set_channel__(self, channel: AbstractChannel, sender_id, receiver_id):
         self.communication_helper.set_channel_for(channel, sender_id, receiver_id)
 
     def __set_process__(self, process: AbstractProcess):
@@ -141,12 +141,12 @@ class DistributedSystem:
 
         def try_send_message() -> bool:
             communication_channel = self.communication_helper.get_channel_for(sender_id, receiver_id)
-            if communication_channel is not AbstractChannel:
+            if not isinstance(communication_channel, AbstractChannel):
                 return False
 
             communication_channel.deliver_message(
-                message,
-                self.__create_channel_message_callback__(receiver_id)
+                self.__create_channel_message_callback__(receiver_id),
+                message
             )
             return True
 
@@ -182,14 +182,14 @@ class DistributedSystemBuilder:
         return self
 
     def add_channel(self, channel: AbstractChannel, sender_id, receiver_id):
-        self.communication_helper.set_channel_for(channel, sender_id, receiver_id)
+        self.distributed_system.__set_channel__(channel, sender_id, receiver_id)
         return self
 
     def remove_channel(self, sender_id, receiver_id):
         self.communication_helper.remove_channel_for(sender_id, receiver_id)
 
     def add_process(self, proc: AbstractProcess):
-        self.communication_helper.set_process(proc)
+        self.distributed_system.__set_process__(proc)
         return self
 
     def remove_process(self, process_id):
