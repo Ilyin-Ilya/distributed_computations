@@ -11,7 +11,7 @@ import csv
 import os
 import sys
 
-message_delay = 1000
+message_delay = 10
 
 def divide_line(line, n):
     # Calculate the length of the line
@@ -34,6 +34,24 @@ def divide_line(line, n):
 
     return points
 
+class MessageTraveller(QThread):
+    message_changed = pyqtSignal()
+
+    def __init__(self, messages):
+        super(MessageTraveller, self).__init__()
+        self.messages = messages
+
+    def run(self):
+        while True:
+            print("lol ", self.currentThreadId())
+            for message in self.messages:
+                message.update_position()
+            self.message_changed.emit()
+            self.msleep(1000)
+            #self.append_message(Message(QPoint(100,100), QPoint(500,500), [1000,1000]))
+
+    def append_message(self, message):
+        self.messages.append(message)
 
 class Message(QWidget):
     def __init__(self, sender, recipient, size, parent = None):
@@ -74,7 +92,7 @@ class Message(QWidget):
         print(self.points)
 
     def paintEvent(self, event):
-        if not self.stopped and self.point is not None:
+         if self.point is not None:
             painter = QPainter(self)
             painter.setRenderHint(QPainter.Antialiasing)
 
@@ -86,7 +104,8 @@ class Message(QWidget):
             # Draw envelope shape
             self.point = self.points[self.cur_point]
             self.draw_message(painter)
-            self.update_position()
+            self.timer = QTimer(self)
+
 
     def update_position(self):
         if self.cur_point == message_delay - 1:
@@ -100,16 +119,17 @@ class Message(QWidget):
             self.cur_point = self.cur_point - 1
 
         self.cur_point = self.cur_point + 1
+        self.delete_if_needed()
 
+    def delete_if_needed(self):
         if self.point is None:
-            timer = QTimer(self)
-            timer.setSingleShot(True)
+            self.timer.setSingleShot(True)
 
             # Connect the timer's timeout signal to a function that will remove the widget
-            timer.timeout.connect(self.deleteLater)
+            self.timer.timeout.connect(self.deleteLater)
 
             # Start the timer with a 2 second delay
-            timer.start(2000)
+            self.timer.start(2000)
 
     def draw_message(self, painter):
         painter.drawPath(self.envelopes[self.cur_point])
@@ -199,12 +219,32 @@ class Window(QMainWindow):
         self.is_graph_uploaded = True
         self.fill_labels()
         self.paint_menu_window()
-        self.message = Message(self.vertexes[1], self.vertexes[2], [self.window.width(), self.window.height()])
-        self.layout().addWidget(self.message)
+
+        message = Message(self.vertexes[1], self.vertexes[2], [self.window_width, self.all_height])
+        self.layout().addWidget(message)
+        message2 = Message(self.vertexes[0], self.vertexes[3], [self.window_width, self.all_height])
+        self.layout().addWidget(message2)
+
+        message3 = Message(self.vertexes[0], self.vertexes[1], [self.window_width, self.all_height])
+        self.layout().addWidget(message3)
+
+
+        self.messages = [message, message2, message3]
+        self.message_thread = MessageTraveller(self.messages)
+
+        print("created thread")
+        self.message_thread.message_changed.connect(self.update)
+        self.message_thread.start()
+        print("started thread")
+
+
+        """
         for i in range(message_delay):
-            print(i)
-            self.update()
-            QApplication.processEvents()
+            if not self.stopped:
+                self.update()
+                QApplication.processEvents()
+                """
+
         #timer = QTimer(self)
         #timer.setSingleShot(True)
         #self.layout().removeWidget(message)
@@ -238,9 +278,13 @@ class Window(QMainWindow):
         if not self.stopped:
             self.stopped = True
             self.stop_algo.setText("Resume")
+            for message in self.messages:
+                message.stop()
         else:
             self.stopped = False
             self.stop_algo.setText("Stop")
+            for message in self.messages:
+                message.resume()
 
 
     def paint_menu_window(self):
