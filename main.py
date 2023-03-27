@@ -8,8 +8,6 @@
 # 1. Create instances distributed-initializer, distributed-process
 # 2.
 
-from distributed_initializer import DistributedInitializer
-from messaging_system import MessagingSystem
 import gui_window
 
 def get_neighbors_of_process(process_id, graph):
