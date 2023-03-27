@@ -14,7 +14,10 @@ class AbstractChannel:
         pass
 
     def start(self):
-        pass
+        with self.handler_lock:
+            if self.task_handler is None:
+                self.task_handler = TaskHandler()
+            self.task_handler.start()
 
     def disable(self):
         pass
@@ -80,12 +83,6 @@ class SimpleDelayChannel(AbstractChannel):
             random_delay
         )
         self.task_handler.schedule_task(message_delivery_task)
-
-    def start(self):
-        with self.handler_lock:
-            if self.task_handler is None:
-                self.task_handler = TaskHandler()
-            self.task_handler.start()
 
 
 class ChannelWrapper(AbstractChannel):
