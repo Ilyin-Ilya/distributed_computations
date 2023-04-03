@@ -228,6 +228,7 @@ class Window(QMainWindow):
         self.execution = QtWidgets.QPushButton("Get execution")
         self.execution.setFont(QFont("Arial", 18))
         self.execution.setFixedSize(200, 50)
+        self.execution.clicked.connect(self.get_execution)
 
         layout = QGridLayout()
 
@@ -276,6 +277,9 @@ class Window(QMainWindow):
         self.layout().addWidget(message)
 
     def start_algorithm(self):
+        pass
+
+    def get_execution(self):
         pass
 
     def paint_graph(self, painter):
