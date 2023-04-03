@@ -88,18 +88,18 @@ class Window(QMainWindow):
         self.timer = QTimer()
         self.timer.timeout.connect(self.update)
 
-        message = Message(1, 2, 3)
+        message = Message(1, 2, 3, 0)
         message.set_size([self.window_width, self.all_height])
         message.set_graph(self.vertexes)
 
         self.layout().addWidget(message)
-        message2 = Message(0, 3, 4)
+        message2 = Message(0, 3, 4, 1)
         message2.set_size([self.window_width, self.all_height])
         message2.set_graph(self.vertexes)
 
         self.layout().addWidget(message2)
 
-        message3 = Message(0, 1, 5)
+        message3 = Message(0, 1, 5, 2)
         message3.set_graph(self.vertexes)
         message3.set_size([self.window_width, self.all_height])
         self.layout().addWidget(message3)
