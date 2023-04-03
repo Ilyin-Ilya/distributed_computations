@@ -13,25 +13,6 @@ import sys
 
 from distributed_objects.message import Message
 
-class MessageTraveller(QThread):
-    message_changed = pyqtSignal()
-
-    def __init__(self, messages):
-        super(MessageTraveller, self).__init__()
-        self.messages = messages
-
-    def run(self):
-        while True:
-            print("lol ", self.currentThreadId())
-            for message in self.messages:
-                message.update_position()
-            self.message_changed.emit()
-            self.msleep(1000)
-            #self.append_message(Message(QPoint(100,100), QPoint(500,500), [1000,1000]))
-
-    def append_message(self, message):
-        self.messages.append(message)
-
 class Window(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -104,24 +85,27 @@ class Window(QMainWindow):
         self.is_graph_uploaded = True
         self.fill_labels()
         self.paint_menu_window()
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update)
 
-        message = Message(self.vertexes[1], self.vertexes[2], [self.window_width, self.all_height])
+        message = Message(1, 2, 3)
+        message.set_size([self.window_width, self.all_height])
+        message.set_graph(self.vertexes)
+
         self.layout().addWidget(message)
-        message2 = Message(self.vertexes[0], self.vertexes[3], [self.window_width, self.all_height])
+        message2 = Message(0, 3, 4)
+        message2.set_size([self.window_width, self.all_height])
+        message2.set_graph(self.vertexes)
+
         self.layout().addWidget(message2)
 
-        message3 = Message(self.vertexes[0], self.vertexes[1], [self.window_width, self.all_height])
+        message3 = Message(0, 1, 5)
+        message3.set_graph(self.vertexes)
+        message3.set_size([self.window_width, self.all_height])
         self.layout().addWidget(message3)
 
-
         self.messages = [message, message2, message3]
-        self.message_thread = MessageTraveller(self.messages)
-
-        print("created thread")
-        self.message_thread.message_changed.connect(self.update)
-        self.message_thread.start()
-        print("started thread")
-
+        self.timer.start(1000)
 
         """
         for i in range(message_delay):
@@ -155,6 +139,7 @@ class Window(QMainWindow):
 
             painter.setBrush(QBrush())
             painter.drawRect(self.all_width - self.menu_width - 1, 0, self.menu_width + 1, self.menu_height + 1)
+            print("Timer pushed")
 
     def paint_process(self, painter, x, y):
         painter.drawEllipse(x, y, self.ellipse_radius, self.ellipse_radius)
@@ -163,10 +148,12 @@ class Window(QMainWindow):
         if not self.stopped:
             self.stopped = True
             self.stop_algo.setText("Resume")
+            self.timer.stop()
             for message in self.messages:
                 message.stop()
         else:
             self.stopped = False
+            self.timer.start()
             self.stop_algo.setText("Stop")
             for message in self.messages:
                 message.resume()
@@ -203,6 +190,7 @@ class Window(QMainWindow):
         self.delivery_chance.resize(280, 40)
         self.delivery_chance.setFont(QFont("Arial", 16))
         self.delivery_chance.setText("1")
+        self.delivery_chance.setReadOnly(True)
 
         self.select_channel_type = QLabel('Select communication channel type')
         self.select_channel_type.setFont(QFont("Arial", 16))
@@ -215,6 +203,7 @@ class Window(QMainWindow):
         self.regular_channel_type = QtWidgets.QRadioButton()
         self.regular_channel_type.setText("Regular")
         self.regular_channel_type.setFont(QFont("Arial", 16))
+        self.regular_channel_type.setChecked(True)
 
         self.select_initiator = QLabel('Select algorithm initiator')
         self.select_initiator.setFont(QFont("Arial", 16))
@@ -229,12 +218,16 @@ class Window(QMainWindow):
         self.start_algo = QtWidgets.QPushButton("Start")
         self.start_algo.setFont(QFont("Arial", 18))
         self.start_algo.setFixedSize(200, 50)
+        self.start_algo.clicked.connect(self.start_algorithm)
 
         self.stop_algo = QtWidgets.QPushButton("Stop")
         self.stop_algo.setFont(QFont("Arial", 18))
         self.stop_algo.setFixedSize(200, 50)
         self.stop_algo.clicked.connect(self.on_stop_click)
 
+        self.execution = QtWidgets.QPushButton("Get execution")
+        self.execution.setFont(QFont("Arial", 18))
+        self.execution.setFixedSize(200, 50)
 
         layout = QGridLayout()
 
@@ -250,6 +243,8 @@ class Window(QMainWindow):
         layout.addWidget(self.initiator_selected, 6, 1)
         layout.addWidget(self.start_algo, 7, 0, 2, 0, Qt.AlignCenter)
         layout.addWidget(self.stop_algo, 8, 0, 2, 0, Qt.AlignCenter)
+        layout.addWidget(self.execution, 9, 0, 2, 0, Qt.AlignCenter)
+
 
         rect = QRect(self.all_width - self.menu_width, 0, self.menu_width, self.menu_height)
 
@@ -274,6 +269,14 @@ class Window(QMainWindow):
             label.move(vertex)
             self.layout().addWidget(label)
             self.labels.append(label)
+
+    def add_message(self, message: Message):
+        self.messages.append(message)
+        message.set_size([self.window_width, self.all_height])
+        self.layout().addWidget(message)
+
+    def start_algorithm(self):
+        pass
 
     def paint_graph(self, painter):
         for vertex in self.vertexes:
