@@ -7,6 +7,9 @@ class ChannelInfoHolder:
     def __init__(self):
         self.communication_dict: Dict[Any, Dict[Any, ChannelWrapper]] = {}
 
+    def get_available_receiver_id_for(self, sender_id) -> List:
+        return [ch.receiver_id for ch in self.get_available_channels_for(sender_id)]
+
     def set_channel_for(self, sender_id, receiver_id, channel: AbstractChannel | None):
         if self.communication_dict.get(sender_id) is not None:
             self.communication_dict.get(sender_id)[receiver_id] = ChannelWrapper(channel, sender_id, receiver_id)
@@ -37,9 +40,6 @@ class ChannelInfoHolder:
     def get_available_channels_for(self, sender_id) -> List[ChannelWrapper]:
         channels = self.communication_dict[sender_id]
         return [] if channels is None else [chan for chan in channels.values() if chan.inner_channel]
-
-    def get_available_receiver_id_for(self, sender_id) -> List:
-        return [ch.receiver_id for ch in self.get_available_channels_for(sender_id)]
 
     def get_all_channels(self) -> List[ChannelWrapper]:
         result = []
