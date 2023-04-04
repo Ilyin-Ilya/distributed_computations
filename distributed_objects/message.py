@@ -95,20 +95,29 @@ def divide_line(line, n):
     return points
 
 class Message(QWidget):
-    def __init__(self, sender, recipient, size, parent = None):
+    def __init__(self, sender, recipient, delay, id, parent = None):
         super(Message, self).__init__(parent)
+        self.delay = delay
         self.setParent(parent)
-        #self.setWindowFlags(Qt.WindowStaysOnTopHint)
+        self.sender = sender
+        self.recipient = recipient
+        self.id = id
+
+    def set_size(self, size):
         self.setFixedSize(size[0], size[1])
 
-        self.point = sender
+    def set_graph(self, graph):
+        self.graph = graph
+        # self.setWindowFlags(Qt.WindowStaysOnTopHint)
+
+        self.point = graph[self.sender]
         self.stopped = False
 
-        line = QLineF(sender.x(), sender.y(), recipient.x(), recipient.y())
+        line = QLineF(graph[self.sender].x(), graph[self.sender].y(), graph[self.recipient].x(), graph[self.recipient].y())
         print("line ")
         print(line.length())
         print(line.center())
-        self.points = divide_line(line, message_delay)
+        self.points = divide_line(line, self.delay)
         self.cur_point = 0
         self.envelopes = []
         self.arrows = []
@@ -134,6 +143,7 @@ class Message(QWidget):
 
     def paintEvent(self, event):
          if self.point is not None:
+            print("message repainted " + str(self.delay))
             painter = QPainter(self)
             painter.setRenderHint(QPainter.Antialiasing)
 
@@ -145,12 +155,13 @@ class Message(QWidget):
             # Draw envelope shape
             self.point = self.points[self.cur_point]
             self.draw_message(painter)
+            self.update_position()
             self.timer = QTimer(self)
 
 
     def update_position(self):
-        if self.cur_point == message_delay - 1:
-            self.cur_point = message_delay - 1
+        if self.cur_point == self.delay - 1:
+            self.cur_point = self.delay - 1
             self.point = None
 
         if not self.stopped:
