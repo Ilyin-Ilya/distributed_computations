@@ -10,8 +10,10 @@ import time
 import csv
 import os
 import sys
+from distibuted_system import DistributedSystem, DistributedSystemBuilder
+from distributed_objects.qmessage import MessageInfoDelayChannel, MessageInfo, QMessage
+from distributed_objects.process import ExampleEchoProcess
 
-from distributed_objects.message import Message
 
 class Window(QMainWindow):
     def __init__(self):
@@ -19,8 +21,9 @@ class Window(QMainWindow):
         self.init_variables()
         self.init_UI()
         self.is_graph_uploaded = False
+        self.distributed_system: DistributedSystem | None = None
         self.window.setAttribute(Qt.WA_TranslucentBackground)
-
+        self.messages = []
         bar = self.window.menuBar()
         file = bar.addMenu("File")
         file.addAction("Upload graph from file")
@@ -42,7 +45,7 @@ class Window(QMainWindow):
         self.center = QPoint(self.window_width / 2, self.all_height / 2)
         print(self.center)
 
-        self.radius = min(self.window_width//2, self.all_height//2) - 2 * self.ellipse_radius
+        self.radius = min(self.window_width // 2, self.all_height // 2) - 2 * self.ellipse_radius
 
         self.stopped = False
         print(self.radius)
@@ -68,6 +71,25 @@ class Window(QMainWindow):
         self.window.show()
         """
 
+    def create_new_delay_channel(self, sender_id, receiver_id, delay_range) -> MessageInfoDelayChannel:
+        channel = MessageInfoDelayChannel(
+            sender_id,
+            receiver_id,
+            delay_range,
+            self.get_message_callback
+        )
+
+        return channel
+
+    def get_message_callback(self, message_info: MessageInfo):
+        qmessage = QMessage(
+            message_info.get_sender_id(),
+            message_info.get_receiver_id(),
+            message_info.get_total_delay()
+        )
+        qmessage.set_graph(self.vertexes)
+        self.add_message(qmessage)
+
     def file_menu_selected(self, q):
         print("triggered")
 
@@ -87,24 +109,28 @@ class Window(QMainWindow):
         self.paint_menu_window()
         self.timer = QTimer()
         self.timer.timeout.connect(self.update)
+        distributed_system_buidler = DistributedSystemBuilder()
 
-        message = Message(1, 2, 3, 0)
-        message.set_size([self.window_width, self.all_height])
-        message.set_graph(self.vertexes)
+        for i in range(len(data)):
+            distributed_system_buidler.add_process(
+                ExampleEchoProcess(i, i == 0)
+            )
+            for j in range(len(data[i])):
+                if data[i][j] == 1:
+                    distributed_system_buidler.add_channel(
+                        self.create_new_delay_channel(
+                            i,
+                            j,
+                            [4,5]
+                        ),
+                        i,
+                        j
+                    )
 
-        self.layout().addWidget(message)
-        message2 = Message(0, 3, 4, 1)
-        message2.set_size([self.window_width, self.all_height])
-        message2.set_graph(self.vertexes)
+        distributed_system_buidler.check()
 
-        self.layout().addWidget(message2)
+        self.distributed_system = distributed_system_buidler.build()
 
-        message3 = Message(0, 1, 5, 2)
-        message3.set_graph(self.vertexes)
-        message3.set_size([self.window_width, self.all_height])
-        self.layout().addWidget(message3)
-
-        self.messages = [message, message2, message3]
         self.timer.start(1000)
 
         """
@@ -114,24 +140,23 @@ class Window(QMainWindow):
                 QApplication.processEvents()
                 """
 
-        #timer = QTimer(self)
-        #timer.setSingleShot(True)
-        #self.layout().removeWidget(message)
+        # timer = QTimer(self)
+        # timer.setSingleShot(True)
+        # self.layout().removeWidget(message)
         # Connect the timer's timeout signal to a function that will remove the widget
-        #timer.timeout.connect(lambda : self.layout().removeWidget(message))
+        # timer.timeout.connect(lambda : self.layout().removeWidget(message))
 
         # Start the timer with a 2 second delay
-        #timer.start(4000)
+        # timer.start(4000)
 
-        #self.paint_message_traversal(message_delay, 1, 2)
-
+        # self.paint_message_traversal(message_delay, 1, 2)
 
     def show(self):
         super().show()
         self.window.show()
 
     def paintEvent(self, event):
-       if self.is_graph_uploaded:
+        if self.is_graph_uploaded:
             painter = QPainter(self)
             painter.setPen(QPen(Qt.black, 5, Qt.SolidLine))
             painter.setBrush(QBrush(Qt.darkGreen, Qt.SolidPattern))
@@ -146,6 +171,7 @@ class Window(QMainWindow):
 
     def on_stop_click(self):
         if not self.stopped:
+            self.distributed_system.unpause()
             self.stopped = True
             self.stop_algo.setText("Resume")
             self.timer.stop()
@@ -153,24 +179,23 @@ class Window(QMainWindow):
                 message.stop()
         else:
             self.stopped = False
+            self.distributed_system.pause()
             self.timer.start()
             self.stop_algo.setText("Stop")
             for message in self.messages:
                 message.resume()
-
 
     def paint_menu_window(self):
         painter = QPainter(self)
         self.menu_label = QLabel('Menu', self)
         self.menu_label.setFont(QFont("Arial", 22, QFont.Bold))
         self.menu_label.setStyleSheet("color: Blue;")
-       # menu_label.move(self.all_width - self.menu_width/2, 20)
+        # menu_label.move(self.all_width - self.menu_width/2, 20)
 
         self.select_algorithm = QLabel('Select algorithm')
         self.select_algorithm.setFont(QFont("Arial", 16))
         self.select_algorithm.adjustSize()
         self.select_algorithm.setStyleSheet("color: Blue;")
-
 
         self.algo_selected = QComboBox()
         self.algo_selected.addItem('Snapshot collection')
@@ -179,13 +204,12 @@ class Window(QMainWindow):
         self.algo_selected.addItem('Wave')
         self.algo_selected.setFont(QFont("Arial", 16))
 
-
         self.select_delivery_chance = QLabel('Input message delivery chance')
         self.select_delivery_chance.setFont(QFont("Arial", 16))
         self.select_delivery_chance.setStyleSheet("color: Blue;")
         self.select_delivery_chance.adjustSize()
 
-        self.delivery_chance= QLineEdit(self)
+        self.delivery_chance = QLineEdit(self)
         self.delivery_chance.move(20, 20)
         self.delivery_chance.resize(280, 40)
         self.delivery_chance.setFont(QFont("Arial", 16))
@@ -246,7 +270,6 @@ class Window(QMainWindow):
         layout.addWidget(self.stop_algo, 8, 0, 2, 0, Qt.AlignCenter)
         layout.addWidget(self.execution, 9, 0, 2, 0, Qt.AlignCenter)
 
-
         rect = QRect(self.all_width - self.menu_width, 0, self.menu_width, self.menu_height)
 
         self.menu = QWidget()
@@ -271,13 +294,14 @@ class Window(QMainWindow):
             self.layout().addWidget(label)
             self.labels.append(label)
 
-    def add_message(self, message: Message):
+    def add_message(self, message: QMessage):
         self.messages.append(message)
         message.set_size([self.window_width, self.all_height])
         self.layout().addWidget(message)
 
     def start_algorithm(self):
-        pass
+        if self.distributed_system:
+            self.distributed_system.start()
 
     def get_execution(self):
         pass
@@ -295,8 +319,8 @@ class Window(QMainWindow):
                     self.lines.append(l)
                     painter.drawLine(l)
 
+
 def application_start():
     app = QApplication(sys.argv)
     window = Window()
     sys.exit(app.exec_())
-

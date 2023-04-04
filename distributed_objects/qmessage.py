@@ -3,7 +3,7 @@ import time
 from PyQt5.QtCore import QLineF, QTimer
 from PyQt5.QtGui import QPainterPath, QPainter, QPen, QBrush, QColor
 from PyQt5.QtWidgets import QWidget
-from channel import AbstractChannel
+from distributed_objects.channel import AbstractChannel
 from taskhandler import TaskInfo
 from random import random
 from threading import Lock
@@ -32,7 +32,7 @@ class MessageInfo:
 
 
 class MessageInfoDelayChannel(AbstractChannel):
-    def __init__(self, delay_range, message_info_callback, sender_id, receiver_id):
+    def __init__(self, sender_id, receiver_id, delay_range, message_info_callback):
         super().__init__()
         self.sender_id = sender_id
         self.receiver_id = receiver_id
@@ -70,8 +70,8 @@ class MessageInfoDelayChannel(AbstractChannel):
         self.message_info_callback(message_info)
 
 
-
 message_delay = 10
+
 
 def divide_line(line, n):
     # Calculate the length of the line
@@ -94,14 +94,15 @@ def divide_line(line, n):
 
     return points
 
-class Message(QWidget):
-    def __init__(self, sender, recipient, delay, id, parent = None):
-        super(Message, self).__init__(parent)
+
+class QMessage(QWidget):
+    def __init__(self, sender, recipient, delay, parent=None):
+        super(QMessage, self).__init__(parent)
         self.delay = delay
         self.setParent(parent)
         self.sender = sender
         self.recipient = recipient
-        self.id = id
+        self.id = str(sender) + str(recipient)
 
     def set_size(self, size):
         self.setFixedSize(size[0], size[1])
@@ -113,7 +114,8 @@ class Message(QWidget):
         self.point = graph[self.sender]
         self.stopped = False
 
-        line = QLineF(graph[self.sender].x(), graph[self.sender].y(), graph[self.recipient].x(), graph[self.recipient].y())
+        line = QLineF(graph[self.sender].x(), graph[self.sender].y(), graph[self.recipient].x(),
+                      graph[self.recipient].y())
         print("line ")
         print(line.length())
         print(line.center())
@@ -142,7 +144,7 @@ class Message(QWidget):
         print(self.points)
 
     def paintEvent(self, event):
-         if self.point is not None:
+        if self.point is not None:
             print("message repainted " + str(self.delay))
             painter = QPainter(self)
             painter.setRenderHint(QPainter.Antialiasing)
@@ -157,7 +159,6 @@ class Message(QWidget):
             self.draw_message(painter)
             self.update_position()
             self.timer = QTimer(self)
-
 
     def update_position(self):
         if self.cur_point == self.delay - 1:

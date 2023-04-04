@@ -102,3 +102,44 @@ class SimpleEchoProcess(AbstractProcess):
     def _on_receive_message_(self, message):
         for receiver_id in self.channel_communication_provider.get_available_process_id():
             self.channel_communication_provider.send_message(receiver_id, message)
+
+
+from dataclasses import dataclass
+from time import time
+
+
+class ExampleEchoProcess(AbstractProcess):
+    def __init__(self, process_id, is_init=False):
+        super().__init__()
+        self.process_id = process_id
+        self.is_init = is_init
+
+    def get_id(self):
+        return self.process_id
+
+    def is_init_process(self):
+        return self.is_init
+
+    def is_in_terminal_state(self) -> bool:
+        return False
+
+    def _on_receive_message_(self, message):
+        if message == AbstractProcess.kick_off_message:
+            message = ExampleEchoProcess.MyMessage()
+            message.counter = 0
+            message.time_stamp = time()
+        print(f"Process: {self.process_id}")
+        print(message.get_string())
+        new_message = ExampleEchoProcess.MyMessage()
+        new_message.counter = message.counter + 1
+        new_message.time_stamp = time()
+
+        for receiver_id in self.channel_communication_provider.get_available_process_id():
+            self.channel_communication_provider.send_message(receiver_id, new_message)
+
+    @dataclass
+    class MyMessage:
+        counter = 0
+        time_stamp = 0
+
+        def get_string(self): return f"Hi for {self.counter} time after {time() - self.time_stamp}"
