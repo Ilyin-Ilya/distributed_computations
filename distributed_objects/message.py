@@ -3,6 +3,73 @@ import time
 from PyQt5.QtCore import QLineF, QTimer
 from PyQt5.QtGui import QPainterPath, QPainter, QPen, QBrush, QColor
 from PyQt5.QtWidgets import QWidget
+from channel import AbstractChannel
+from taskhandler import TaskInfo
+from random import random
+from threading import Lock
+
+
+class MessageInfo:
+    def __init__(self, sender_id, receiver_id, task_info: TaskInfo):
+        self.sender_id = sender_id
+        self.receiver_id = receiver_id
+        self.task_info = task_info
+
+    def get_sender_id(self):
+        return self.sender_id
+
+    def get_receiver_id(self):
+        return self.receiver_id
+
+    def get_total_delay(self):
+        return self.task_info.get_delay()
+
+    def get_time_spent(self):
+        time_left = self.task_info.time_left()
+        if time_left < 0:
+            return 0
+        return self.task_info.get_delay() - self.task_info.time_left()
+
+
+class MessageInfoDelayChannel(AbstractChannel):
+    def __init__(self, delay_range, message_info_callback, sender_id, receiver_id):
+        super().__init__()
+        self.sender_id = sender_id
+        self.receiver_id = receiver_id
+        self.message_info_callback = message_info_callback
+        self.delay_range = delay_range
+        self.is_enabled = True
+        self.is_enabled_lock = Lock()
+
+    def disable(self):
+        with self.is_enabled_lock:
+            self.is_enabled = False
+
+    def enable(self):
+        with self.is_enabled_lock:
+            self.is_enabled = True
+
+    def deliver_message(self, send_message_callback, message):
+        if not self.is_enabled:
+            return
+
+        self.start()
+        random_value = random()
+        random_delay = self.delay_range[0] + (self.delay_range[1] - self.delay_range[0]) * random_value
+        task_info = self.task_handler.schedule_action(
+            lambda: send_message_callback(message),
+            random_delay
+        )
+
+        message_info = MessageInfo(
+            self.sender_id,
+            self.receiver_id,
+            task_info
+        )
+
+        self.message_info_callback(message_info)
+
+
 
 message_delay = 10
 

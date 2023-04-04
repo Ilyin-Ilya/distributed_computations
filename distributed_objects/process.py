@@ -30,7 +30,7 @@ class AbstractProcess:
     def is_in_terminal_state(self) -> bool:
         pass
 
-    def on_receive_message(self, message):
+    def _on_receive_message_(self, message):
         """
         Implement this method with actual algorithm running on the node
         """
@@ -53,7 +53,7 @@ class AbstractProcess:
     def receive_message(self, message):
         if self.is_enabled:
             self.task_handler \
-                .schedule_action(lambda: self.on_receive_message(message))
+                .schedule_action(lambda: self._on_receive_message_(message))
 
     @final
     def start(self):
@@ -81,7 +81,7 @@ class AbstractProcess:
             .send_message(receiver_id, message)
 
     @final
-    def get_available_channels(self) -> List:
+    def __get_available_channels__(self) -> List:
         return self.channel_communication_provider.get_available_process_id()
 
 
@@ -99,6 +99,6 @@ class SimpleEchoProcess(AbstractProcess):
     def is_in_terminal_state(self) -> bool:
         return False
 
-    def on_receive_message(self, message):
+    def _on_receive_message_(self, message):
         for receiver_id in self.channel_communication_provider.get_available_process_id():
             self.channel_communication_provider.send_message(receiver_id, message)
