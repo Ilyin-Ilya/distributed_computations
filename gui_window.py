@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QDesktopWidget, QFileDial
     QGridLayout, QLineEdit, QGroupBox, QVBoxLayout
 from PyQt5.QtGui import QPainter, QPen, QBrush, QPolygon, QFont, QPainterPath, QColor
 from PyQt5.QtCore import QPoint, QLine, QRect, QLineF, QTimer, QCoreApplication, QThread, pyqtSignal, QMetaObject
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QObject
 import math
 import copy
 import time
@@ -16,6 +16,9 @@ from distributed_objects.process import ExampleEchoProcess
 
 
 class Window(QMainWindow):
+    class MessageInfoSignal(QObject):
+        signal = pyqtSignal(MessageInfo)
+
     def __init__(self):
         super().__init__()
         self.init_variables()
@@ -24,6 +27,8 @@ class Window(QMainWindow):
         self.distributed_system: DistributedSystem | None = None
         self.window.setAttribute(Qt.WA_TranslucentBackground)
         self.messages = []
+        self.message_info_signal = Window.MessageInfoSignal()
+        self.message_info_signal.signal.connect(self.create_qmessage)
         bar = self.window.menuBar()
         file = bar.addMenu("File")
         file.addAction("Upload graph from file")
@@ -42,7 +47,7 @@ class Window(QMainWindow):
 
         self.ellipse_radius = 55
         self.first_process = [70, 70]
-        self.center = QPoint(self.window_width / 2, self.all_height / 2)
+        self.center = QPoint(self.window_width // 2, self.all_height // 2)
         print(self.center)
 
         self.radius = min(self.window_width // 2, self.all_height // 2) - 2 * self.ellipse_radius
@@ -71,6 +76,15 @@ class Window(QMainWindow):
         self.window.show()
         """
 
+    def create_qmessage(self, message_info: MessageInfo):
+        qmessage = QMessage(
+            message_info.get_sender_id(),
+            message_info.get_receiver_id(),
+            message_info.get_total_delay(),
+        )
+        qmessage.set_graph(self.vertexes)
+        self.add_message(qmessage)
+
     def create_new_delay_channel(self, sender_id, receiver_id, delay_range) -> MessageInfoDelayChannel:
         channel = MessageInfoDelayChannel(
             sender_id,
@@ -82,13 +96,7 @@ class Window(QMainWindow):
         return channel
 
     def get_message_callback(self, message_info: MessageInfo):
-        qmessage = QMessage(
-            message_info.get_sender_id(),
-            message_info.get_receiver_id(),
-            message_info.get_total_delay()
-        )
-        qmessage.set_graph(self.vertexes)
-        self.add_message(qmessage)
+        self.message_info_signal.signal.emit(message_info)
 
     def file_menu_selected(self, q):
         print("triggered")
@@ -116,12 +124,14 @@ class Window(QMainWindow):
                 ExampleEchoProcess(i, i == 0)
             )
             for j in range(len(data[i])):
+                if i == j:
+                    continue
                 if data[i][j] == 1:
                     distributed_system_buidler.add_channel(
                         self.create_new_delay_channel(
                             i,
                             j,
-                            [4,5]
+                            [4, 5]
                         ),
                         i,
                         j

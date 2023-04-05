@@ -84,7 +84,7 @@ def divide_line(line, n):
     points = []
 
     # Determine the points along the line
-    for i in range(n):
+    for i in range(int(n)):
         # Calculate the position of the current point
         position = line.pointAt(i * distance_between_points / line.length())
         print("point")
