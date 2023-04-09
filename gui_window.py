@@ -2,7 +2,8 @@ from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDesktopWidget, QFileDialog, QAction, QWidget, QLabel, QComboBox, \
     QGridLayout, QLineEdit, QGroupBox, QVBoxLayout
 from PyQt5.QtGui import QPainter, QPen, QBrush, QPolygon, QFont, QPainterPath, QColor
-from PyQt5.QtCore import QPoint, QLine, QRect, QLineF, QTimer, QCoreApplication, QThread, pyqtSignal, QMetaObject
+from PyQt5.QtCore import QPoint, QLine, QRect, QLineF, QTimer, QCoreApplication, QThread, pyqtSignal, QMetaObject, \
+    QPropertyAnimation, QParallelAnimationGroup
 from PyQt5.QtCore import Qt, QObject
 import math
 import copy
@@ -48,12 +49,11 @@ class Window(QMainWindow):
         self.ellipse_radius = 55
         self.first_process = [70, 70]
         self.center = QPoint(self.window_width // 2, self.all_height // 2)
-        print(self.center)
 
         self.radius = min(self.window_width // 2, self.all_height // 2) - 2 * self.ellipse_radius
 
         self.stopped = False
-        print(self.radius)
+        self.animation_group = QParallelAnimationGroup()
 
     def init_UI(self):
         self.window = QMainWindow()
@@ -99,7 +99,6 @@ class Window(QMainWindow):
         self.message_info_signal.signal.emit(message_info)
 
     def file_menu_selected(self, q):
-        print("triggered")
 
         filename, second = QFileDialog.getOpenFileName(self.window, "Open file", "")
 
@@ -116,7 +115,7 @@ class Window(QMainWindow):
         self.fill_labels()
         self.paint_menu_window()
         self.timer = QTimer()
-        self.timer.timeout.connect(self.update)
+        self.timer.timeout.connect(self.repaint)
         distributed_system_buidler = DistributedSystemBuilder()
 
         for i in range(len(data)):
@@ -131,7 +130,7 @@ class Window(QMainWindow):
                         self.create_new_delay_channel(
                             i,
                             j,
-                            [4, 5]
+                            [5, 5]
                         ),
                         i,
                         j
@@ -141,8 +140,7 @@ class Window(QMainWindow):
 
         self.distributed_system = distributed_system_buidler.build()
 
-        self.timer.start(1000)
-
+        self.timer.start(300)
         """
         for i in range(message_delay):
             if not self.stopped:
@@ -174,7 +172,7 @@ class Window(QMainWindow):
 
             painter.setBrush(QBrush())
             painter.drawRect(self.all_width - self.menu_width - 1, 0, self.menu_width + 1, self.menu_height + 1)
-            print("Timer pushed")
+            print("Timer pushed" + time.time().__str__())
 
     def paint_process(self, painter, x, y):
         painter.drawEllipse(x, y, self.ellipse_radius, self.ellipse_radius)
@@ -184,13 +182,13 @@ class Window(QMainWindow):
             self.distributed_system.unpause()
             self.stopped = True
             self.stop_algo.setText("Resume")
-            self.timer.stop()
+            #self.timer.stop()
             for message in self.messages:
                 message.stop()
         else:
             self.stopped = False
             self.distributed_system.pause()
-            self.timer.start()
+            #self.timer.start()
             self.stop_algo.setText("Stop")
             for message in self.messages:
                 message.resume()
@@ -305,13 +303,39 @@ class Window(QMainWindow):
             self.labels.append(label)
 
     def add_message(self, message: QMessage):
-        self.messages.append(message)
+        print("Message added " + str(message))
+        rect = QtWidgets.QPushButton("button")
+        self.child = rect
+        self.child.setStyleSheet("background-color:red;border-radius:15px;")
+        self.child.resize(50, 50)
+        self.anim = QPropertyAnimation(self.child, b"pos")
+        self.anim.setStartValue(self.vertexes[message.sender])
+        self.anim.setEndValue(self.vertexes[message.recipient])
+        self.anim.setDuration(5000)
+        self.layout().addWidget(self.child)
+        self.anim.start()
+        """
+        message.is_deleted.connect(lambda: self.remove_message(message))
         message.set_size([self.window_width, self.all_height])
+        message.build_animation()
+        self.messages.append(message)
+        self.setUpdatesEnabled(False)
         self.layout().addWidget(message)
+        self.setUpdatesEnabled(True)
+        self.animation_group.addAnimation(message.get_animation())
+        message.animate()
+        """
 
     def start_algorithm(self):
         if self.distributed_system:
             self.distributed_system.start()
+
+    def remove_message(self, message):
+        print("Message removed " + str(message))
+        self.messages.remove(message)
+        self.layout().removeWidget(message)
+        print("Messages: ")
+        print(self.messages)
 
     def get_execution(self):
         pass
