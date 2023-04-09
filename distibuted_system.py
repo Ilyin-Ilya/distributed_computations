@@ -12,6 +12,7 @@ class DistributedSystem:
 
     def __init__(self, communication_helper=None):
         self.main_task_handler = TaskHandler()  # DistributedSystem's handler to avoid main thread blocking
+        self.has_started = False
         if communication_helper:
             self.communication_helper = communication_helper
         else:
@@ -49,14 +50,18 @@ class DistributedSystem:
         self.main_task_handler.start()
         init_processes = [proc for proc in self.communication_helper.get_all_processes() if proc.is_init_process()]
 
-        for proc in init_processes:
-            proc.receive_message(AbstractProcess.kick_off_message)
+        def component_start():
 
-        for process in self.communication_helper.get_all_processes():
-            process.start()
+            for proc in init_processes:
+                proc.receive_message(AbstractProcess.kick_off_message)
+            for process in self.communication_helper.get_all_processes():
+                process.start()
+            for channel in self.communication_helper.get_all_channels():
+                channel.start()
 
-        for channel in self.communication_helper.get_all_channels():
-            channel.start()
+        if not self.has_started:
+            self.has_started = True
+            self.main_task_handler.schedule_action(component_start)
 
     def get_snapshot(self):
         self.pause()
