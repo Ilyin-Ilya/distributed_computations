@@ -1,3 +1,5 @@
+from random import random, randrange, randint
+
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDesktopWidget, QFileDialog, QAction, QWidget, QLabel, QComboBox, \
     QGridLayout, QLineEdit, QGroupBox, QVBoxLayout
@@ -28,6 +30,7 @@ class Window(QMainWindow):
         self.distributed_system: DistributedSystem | None = None
         self.window.setAttribute(Qt.WA_TranslucentBackground)
         self.messages = []
+        self.anims = []
         self.message_info_signal = Window.MessageInfoSignal()
         self.message_info_signal.signal.connect(self.create_qmessage)
         bar = self.window.menuBar()
@@ -77,13 +80,15 @@ class Window(QMainWindow):
         """
 
     def create_qmessage(self, message_info: MessageInfo):
+        """
         qmessage = QMessage(
             message_info.get_sender_id(),
             message_info.get_receiver_id(),
             message_info.get_total_delay(),
         )
         qmessage.set_graph(self.vertexes)
-        self.add_message(qmessage)
+        """
+        #self.add_message(qmessage)
 
     def create_new_delay_channel(self, sender_id, receiver_id, delay_range) -> MessageInfoDelayChannel:
         channel = MessageInfoDelayChannel(
@@ -96,7 +101,8 @@ class Window(QMainWindow):
         return channel
 
     def get_message_callback(self, message_info: MessageInfo):
-        self.message_info_signal.signal.emit(message_info)
+        pass
+        #self.message_info_signal.signal.emit(message_info)
 
     def file_menu_selected(self, q):
 
@@ -114,8 +120,8 @@ class Window(QMainWindow):
         self.is_graph_uploaded = True
         self.fill_labels()
         self.paint_menu_window()
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.repaint)
+        self.test()
+        #self.start_test()
         distributed_system_buidler = DistributedSystemBuilder()
 
         for i in range(len(data)):
@@ -140,7 +146,6 @@ class Window(QMainWindow):
 
         self.distributed_system = distributed_system_buidler.build()
 
-        self.timer.start(300)
         """
         for i in range(message_delay):
             if not self.stopped:
@@ -304,16 +309,11 @@ class Window(QMainWindow):
 
     def add_message(self, message: QMessage):
         print("Message added " + str(message))
-        rect = QtWidgets.QPushButton("button")
-        self.child = rect
-        self.child.setStyleSheet("background-color:red;border-radius:15px;")
-        self.child.resize(50, 50)
-        self.anim = QPropertyAnimation(self.child, b"pos")
-        self.anim.setStartValue(self.vertexes[message.sender])
-        self.anim.setEndValue(self.vertexes[message.recipient])
-        self.anim.setDuration(5000)
-        self.layout().addWidget(self.child)
-        self.anim.start()
+        anim = message.build_animation()
+        #anim.setDuration(40000)
+        self.layout().addWidget(message)
+        self.anims.append(anim)
+        anim.start()
         """
         message.is_deleted.connect(lambda: self.remove_message(message))
         message.set_size([self.window_width, self.all_height])
@@ -353,6 +353,16 @@ class Window(QMainWindow):
                     self.lines.append(l)
                     painter.drawLine(l)
 
+    def test(self):
+        for j in range(70):
+            message = QMessage(randint(0, 3), randint(0,3), 5)
+            message.set_size([self.window_width, self.all_height])
+            message.set_graph(self.vertexes)
+            self.add_message(message)
+
+    def start_test(self):
+        for anim in self.anims:
+            anim.start()
 
 def application_start():
     app = QApplication(sys.argv)

@@ -80,12 +80,13 @@ def divide_line(line, n):
     # Create a list to hold the points
     points = []
 
-    # Determine the points along the line
-    for i in range(int(n)):
-        # Calculate the position of the current point
-        position = line.pointAt(i * distance_between_points / line.length())
-        # Add the point to the list
-        points.append(position)
+    if line_length != 0:
+        # Determine the points along the line
+        for i in range(int(n)):
+            # Calculate the position of the current point
+            position = line.pointAt(i * distance_between_points / line.length())
+            # Add the point to the list
+            points.append(position)
 
     print(points)
     return points
@@ -190,6 +191,8 @@ class QMessage(QWidget):
         envelope_path = QPainterPath()
         print("Position! ")
         print(self._position)
+        #painter.drawRect(self._position.x(), self._position.y(), self._position.x() - 20, self._position.y() - 20)
+
         envelope_path.moveTo(self._position.x(), self._position.y())
         envelope_path.lineTo(self._position.x() - 25, self._position.y())
         envelope_path.lineTo(self._position.x() - 25, self._position.y() - 50)
@@ -213,6 +216,7 @@ class QMessage(QWidget):
         painter.drawPath(arrow_path)
 
 
+
     def stop(self):
         self.stopped = True
 
@@ -226,18 +230,19 @@ class QMessage(QWidget):
         print("Position ")
         print(position)
         self._position = position
+        self.update()
 
     position = pyqtProperty(QPoint, fset=set_position, fget=get_position)
 
     def animate(self):
-        self.anim.start()
-        self.anim.finished.connect(self.delete_and_notify)
+        self.anim.start(self.anim.DeleteWhenStopped)
 
     def build_animation(self):
         self.anim = QPropertyAnimation(self, b'position')
         self.anim.setStartValue(self.graph[self.sender])
         self.anim.setEndValue(self.graph[self.recipient])
-        self.anim.setDuration((self.delay - 2) * 1000)
+        self.anim.setDuration(10000)
+        return self.anim
 
     def get_animation(self):
         return self.anim
