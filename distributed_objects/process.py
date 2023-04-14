@@ -113,6 +113,7 @@ class ExampleEchoProcess(AbstractProcess):
         super().__init__()
         self.process_id = process_id
         self.is_init = is_init
+        self.has_started = False
 
     def get_id(self):
         return self.process_id
@@ -133,7 +134,9 @@ class ExampleEchoProcess(AbstractProcess):
         new_message = ExampleEchoProcess.MyMessage()
         new_message.counter = message.counter + 1
         new_message.time_stamp = time()
-
+        if self.has_started:
+            return
+        self.has_started = True
         for receiver_id in self.channel_communication_provider.get_available_process_id():
             self.channel_communication_provider.send_message(receiver_id, new_message)
 
@@ -142,4 +145,4 @@ class ExampleEchoProcess(AbstractProcess):
         counter = 0
         time_stamp = 0
 
-        def get_string(self): return f"Hi for {self.counter} time after {time() - self.time_stamp}"
+        def get_string(self): return f"Hi for {self.counter} time after {time()}"

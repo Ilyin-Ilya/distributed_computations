@@ -16,7 +16,7 @@ import sys
 from distibuted_system import DistributedSystem, DistributedSystemBuilder
 from distributed_objects.qmessage import MessageInfoDelayChannel, MessageInfo, QMessage
 from distributed_objects.process import ExampleEchoProcess
-
+from taskhandler import TaskHandler
 
 class Window(QMainWindow):
     class MessageInfoSignal(QObject):
@@ -24,6 +24,7 @@ class Window(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.channel_task_handler = TaskHandler()
         self.init_variables()
         self.init_UI()
         self.is_graph_uploaded = False
@@ -97,7 +98,7 @@ class Window(QMainWindow):
             delay_range,
             self.get_message_callback
         )
-
+        channel.task_handler = self.channel_task_handler
         return channel
 
     def get_message_callback(self, message_info: MessageInfo):

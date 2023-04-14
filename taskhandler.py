@@ -1,8 +1,7 @@
-from threading import Lock
 from time import time
 from typing import Callable, List
 from dataclasses import dataclass
-from threading import Thread
+from multiprocessing import Process, Lock
 
 
 @dataclass
@@ -39,7 +38,8 @@ class TaskHandler:
         self.start_lock = Lock()
         self.pause_lock = Lock()
         self.pause_time = None
-        self.thread: Thread = Thread(target=self.__start_action__)
+        self.thread: Process = Process(target=self.__start_action__)
+
         self.is_finished = None
         self.pending_instant_tasks: List[TaskHandler.TaskInfoImpl] = []
         self.pending_delayed_tasks: List[TaskHandler.TaskInfoImpl] = []
