@@ -12,9 +12,9 @@ class ChannelCommunicationProvider:
 class AbstractProcess:
     kick_off_message = "Start initially"
 
-    def __init__(self, task_handler: TaskHandler):
+    def __init__(self, task_handler: TaskHandler | None):
         self.channel_communication_provider: ChannelCommunicationProvider | None = None
-        self.task_handler = task_handler
+        self.task_handler: TaskHandler | None = task_handler  # if no task handler, then processing is synchronous
         self.is_enabled = True
         self.is_disabled_lock = Lock()
 
@@ -52,27 +52,34 @@ class AbstractProcess:
     @final
     def receive_message(self, message):
         if self.is_enabled:
-            self.task_handler \
-                .schedule_action(lambda: self._on_receive_message_(message))
+            if self.task_handler is None:
+                self._on_receive_message_(message)
+            else:
+                self.task_handler \
+                    .schedule_action(lambda: self._on_receive_message_(message))
 
     @final
     def start(self):
-        self.task_handler.start()
+        if self.task_handler is not None:
+            self.task_handler.start()
 
     @final
     def pause(self):
-        self.task_handler.pause()
+        if self.task_handler is not None:
+            self.task_handler.pause()
 
     @final
     def unpause(self):
-        self.task_handler.unpause()
+        if self.task_handler is not None:
+            self.task_handler.unpause()
 
     @final
     def stop(self, is_instant=False):
-        if is_instant:
-            self.task_handler.instant_stop()
-        else:
-            self.task_handler.stop()
+        if self.task_handler is not None:
+            if is_instant:
+                self.task_handler.instant_stop()
+            else:
+                self.task_handler.stop()
 
     @final
     def send_message(self, receiver_id, message):
