@@ -1,22 +1,20 @@
 import random
 
 from taskhandler import TaskHandler, Task
-from threading import Lock
+from multiprocessing import Lock
 from typing import final
 
 
 class AbstractChannel:
-    def __init__(self):
+    def __init__(self, task_handler: TaskHandler):
         self.handler_lock = Lock()
-        self.task_handler = TaskHandler("Channel")
+        self.task_handler = task_handler
 
     def deliver_message(self, send_message_callback, message):
         pass
 
     def start(self):
         with self.handler_lock:
-            if self.task_handler is None:
-                self.task_handler = TaskHandler()
             self.task_handler.start()
 
     def disable(self):
@@ -57,8 +55,8 @@ class AbstractChannel:
 
 
 class SimpleDelayChannel(AbstractChannel):
-    def __init__(self, delay_range):
-        super().__init__()
+    def __init__(self, delay_range, task_handler: TaskHandler):
+        super().__init__(task_handler)
         self.delay_range = delay_range
         self.is_enabled = True
         self.is_enabled_lock = Lock()

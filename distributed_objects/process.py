@@ -12,9 +12,9 @@ class ChannelCommunicationProvider:
 class AbstractProcess:
     kick_off_message = "Start initially"
 
-    def __init__(self):
+    def __init__(self, task_handler: TaskHandler):
         self.channel_communication_provider: ChannelCommunicationProvider | None = None
-        self.task_handler = TaskHandler("Channel")
+        self.task_handler = task_handler
         self.is_enabled = True
         self.is_disabled_lock = Lock()
 
@@ -86,7 +86,7 @@ class AbstractProcess:
 
 
 class SimpleEchoProcess(AbstractProcess):
-    def __init__(self, process_id):
+    def __init__(self, process_id, task_handler: TaskHandler = TaskHandler("Channel")):
         super().__init__()
         self.process_id = process_id
 
@@ -109,8 +109,8 @@ from time import time
 
 
 class ExampleEchoProcess(AbstractProcess):
-    def __init__(self, process_id, is_init=False):
-        super().__init__()
+    def __init__(self, process_id, task_handler: TaskHandler = TaskHandler("Channel"), is_init=False):
+        super().__init__(task_handler)
         self.process_id = process_id
         self.is_init = is_init
 

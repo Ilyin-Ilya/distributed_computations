@@ -31,9 +31,17 @@ class MessageInfo:
         return self.task_info.get_delay() - self.task_info.time_left()
 
 
+from taskhandler import TaskHandler
+
+
 class MessageInfoDelayChannel(AbstractChannel):
-    def __init__(self, sender_id, receiver_id, delay_range, message_info_callback):
-        super().__init__()
+    def __init__(self, sender_id,
+                 receiver_id,
+                 delay_range,
+                 message_info_callback,
+                 task_handler: TaskHandler
+                 ):
+        super().__init__(task_handler)
         self.sender_id = sender_id
         self.receiver_id = receiver_id
         self.message_info_callback = message_info_callback

@@ -76,9 +76,9 @@ class Window(QMainWindow):
             sender_id,
             receiver_id,
             delay_range,
-            self.get_message_callback
+            self.get_message_callback,
+            self.channel_task_handler
         )
-
         return channel
 
     def get_message_callback(self, message_info: MessageInfo):
