@@ -1,9 +1,9 @@
-from taskhandler import TaskHandler, Task
+from task_handler.taskhandler import TaskHandler, Task
 from distributed_objects.channel import AbstractChannel
 from typing import List
 from distributed_objects.process import ChannelCommunicationProvider, AbstractProcess
 from configuration_objects.communication_helper import CommunicationHelper
-from looper import ProcessLooper, QThreadLooper, ThreadLooper
+from task_handler.looper import ProcessLooper, QThreadLooper, ThreadLooper
 from enum import Enum
 
 

@@ -1,5 +1,5 @@
 from typing import final, List
-from taskhandler import TaskHandler
+from task_handler.taskhandler import TaskHandler
 from threading import Lock
 
 

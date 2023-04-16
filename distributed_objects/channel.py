@@ -1,6 +1,6 @@
 import random
 
-from taskhandler import TaskHandler, Task
+from task_handler.taskhandler import TaskHandler, Task
 from multiprocessing import Lock
 from typing import final
 

@@ -16,7 +16,7 @@ import sys
 from distibuted_system import DistributedSystem, DistributedSystemBuilder
 from distributed_objects.qmessage import MessageInfoDelayChannel, MessageInfo, QMessage
 from distributed_objects.process import ExampleEchoProcess
-from taskhandler import TaskHandler
+from task_handler.taskhandler import TaskHandler
 
 
 class Window(QMainWindow):

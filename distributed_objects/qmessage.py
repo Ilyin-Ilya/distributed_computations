@@ -4,7 +4,7 @@ from PyQt5.QtCore import QLineF, QTimer, pyqtSignal, QPropertyAnimation, QPoint,
 from PyQt5.QtGui import QPainterPath, QPainter, QPen, QBrush, QColor
 from PyQt5.QtWidgets import QWidget
 from distributed_objects.channel import AbstractChannel
-from taskhandler import TaskInfo
+from task_handler.taskhandler import TaskInfo
 from random import random
 from threading import Lock
 
@@ -31,7 +31,7 @@ class MessageInfo:
         return self.task_info.get_delay() - self.task_info.time_left()
 
 
-from taskhandler import TaskHandler
+from task_handler.taskhandler import TaskHandler
 
 
 class MessageInfoDelayChannel(AbstractChannel):
@@ -147,23 +147,22 @@ class QMessage(QWidget):
             arrow_path.lineTo(self.points[i].x() + 20, self.points[i].y() - 40)
             self.arrows.append(arrow_path)
 
-
     def paintEvent(self, event):
-        #print("Paint called")
+        # print("Paint called")
         if self._position is not None:
-                painter = QPainter(self)
-                painter.setRenderHint(QPainter.Antialiasing)
+            painter = QPainter(self)
+            painter.setRenderHint(QPainter.Antialiasing)
 
-                # Set pen and brush for the envelope shape
-                envelope_pen = QPen(QColor(255, 255, 255))
-                envelope_brush = QBrush(QColor(225, 225, 225))
-                painter.setPen(envelope_pen)
-                painter.setBrush(envelope_brush)
-                # Draw envelope shape
-                #self.point = self.points[self.cur_point]
-                self.draw_message(painter)
-                #self.update_position()
-                #self.timer = QTimer(self)
+            # Set pen and brush for the envelope shape
+            envelope_pen = QPen(QColor(255, 255, 255))
+            envelope_brush = QBrush(QColor(225, 225, 225))
+            painter.setPen(envelope_pen)
+            painter.setBrush(envelope_brush)
+            # Draw envelope shape
+            # self.point = self.points[self.cur_point]
+            self.draw_message(painter)
+            # self.update_position()
+            # self.timer = QTimer(self)
 
     def update_position(self):
         if self.cur_point == int(self.delay) - 2:
@@ -182,13 +181,13 @@ class QMessage(QWidget):
     def delete_if_needed(self):
         if self._position is None:
             self.delete_and_notify()
-            #self.timer.setSingleShot(True)
+            # self.timer.setSingleShot(True)
 
             # Connect the timer's timeout signal to a function that will remove the widget
-            #self.timer.timeout.connect(self.delete_and_notify)
+            # self.timer.timeout.connect(self.delete_and_notify)
 
             # Start the timer with a 2 second delay
-            #self.timer.start(1000)
+            # self.timer.start(1000)
 
     def delete_and_notify(self):
         self.anim.stop()
@@ -197,9 +196,9 @@ class QMessage(QWidget):
 
     def draw_message(self, painter):
         envelope_path = QPainterPath()
-        #print("Position! ")
-        #print(self._position)
-        #painter.drawRect(self._position.x(), self._position.y(), self._position.x() - 20, self._position.y() - 20)
+        # print("Position! ")
+        # print(self._position)
+        # painter.drawRect(self._position.x(), self._position.y(), self._position.x() - 20, self._position.y() - 20)
 
         envelope_path.moveTo(self._position.x(), self._position.y())
         envelope_path.lineTo(self._position.x() - 25, self._position.y())
@@ -223,8 +222,6 @@ class QMessage(QWidget):
         arrow_path.lineTo(self._position.x() + 20, self._position.y() - 40)
         painter.drawPath(arrow_path)
 
-
-
     def stop(self):
         self.stopped = True
 
@@ -235,8 +232,8 @@ class QMessage(QWidget):
         return self._position
 
     def set_position(self, position):
-        #print("Position ")
-        #print(position)
+        # print("Position ")
+        # print(position)
         self._position = position
         self.update()
 
