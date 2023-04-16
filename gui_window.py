@@ -1,9 +1,12 @@
+from random import random, randrange, randint
+
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDesktopWidget, QFileDialog, QAction, QWidget, QLabel, QComboBox, \
     QGridLayout, QLineEdit, QGroupBox, QVBoxLayout
 from PyQt5.QtGui import QPainter, QPen, QBrush, QPolygon, QFont, QPainterPath, QColor
-from PyQt5.QtCore import QPoint, QLine, QRect, QLineF, QTimer, QCoreApplication, QThread, pyqtSignal, QMetaObject
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import QPoint, QLine, QRect, QLineF, QTimer, QCoreApplication, QThread, pyqtSignal, QMetaObject, \
+    QPropertyAnimation, QParallelAnimationGroup
+from PyQt5.QtCore import Qt, QObject
 import math
 import copy
 import time
@@ -13,9 +16,12 @@ import sys
 from distibuted_system import DistributedSystem, DistributedSystemBuilder
 from distributed_objects.qmessage import MessageInfoDelayChannel, MessageInfo, QMessage
 from distributed_objects.process import ExampleEchoProcess
-
+from taskhandler import TaskHandler
 
 class Window(QMainWindow):
+    class MessageInfoSignal(QObject):
+        signal = pyqtSignal(MessageInfo)
+
     def __init__(self):
         super().__init__()
         self.init_variables()
@@ -24,6 +30,9 @@ class Window(QMainWindow):
         self.distributed_system: DistributedSystem | None = None
         self.window.setAttribute(Qt.WA_TranslucentBackground)
         self.messages = []
+        self.anims = []
+        self.message_info_signal = Window.MessageInfoSignal()
+        self.message_info_signal.signal.connect(self.create_qmessage)
         bar = self.window.menuBar()
         file = bar.addMenu("File")
         file.addAction("Upload graph from file")
@@ -42,13 +51,12 @@ class Window(QMainWindow):
 
         self.ellipse_radius = 55
         self.first_process = [70, 70]
-        self.center = QPoint(self.window_width / 2, self.all_height / 2)
-        print(self.center)
+        self.center = QPoint(self.window_width // 2, self.all_height // 2)
 
         self.radius = min(self.window_width // 2, self.all_height // 2) - 2 * self.ellipse_radius
 
         self.stopped = False
-        print(self.radius)
+        self.animation_group = QParallelAnimationGroup()
 
     def init_UI(self):
         self.window = QMainWindow()
@@ -71,6 +79,17 @@ class Window(QMainWindow):
         self.window.show()
         """
 
+    def create_qmessage(self, message_info: MessageInfo):
+        """
+        qmessage = QMessage(
+            message_info.get_sender_id(),
+            message_info.get_receiver_id(),
+            message_info.get_total_delay(),
+        )
+        qmessage.set_graph(self.vertexes)
+        """
+        #self.add_message(qmessage)
+
     def create_new_delay_channel(self, sender_id, receiver_id, delay_range) -> MessageInfoDelayChannel:
         channel = MessageInfoDelayChannel(
             sender_id,
@@ -82,16 +101,10 @@ class Window(QMainWindow):
         return channel
 
     def get_message_callback(self, message_info: MessageInfo):
-        qmessage = QMessage(
-            message_info.get_sender_id(),
-            message_info.get_receiver_id(),
-            message_info.get_total_delay()
-        )
-        qmessage.set_graph(self.vertexes)
-        self.add_message(qmessage)
+        pass
+        #self.message_info_signal.signal.emit(message_info)
 
     def file_menu_selected(self, q):
-        print("triggered")
 
         filename, second = QFileDialog.getOpenFileName(self.window, "Open file", "")
 
@@ -107,18 +120,19 @@ class Window(QMainWindow):
         self.is_graph_uploaded = True
         self.fill_labels()
         self.paint_menu_window()
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.update)
-        distributed_system_builder = \
-            DistributedSystemBuilder() \
-                .enable_one_thread_model(True) \
-                .set_async_model(DistributedSystemBuilder.LooperType.QThread, 10)
+        self.test()
+        #self.start_test()
+        distributed_system_builder = DistributedSystemBuilder() \
+            .enable_one_thread_model(True) \
+            .set_async_model(DistributedSystemBuilder.LooperType.QThread, 10)
 
         for i in range(len(data)):
             distributed_system_builder.add_process(
                 ExampleEchoProcess(i, None, i == 0)
             )
             for j in range(len(data[i])):
+                if i == j:
+                    continue
                 if data[i][j] == 1:
                     distributed_system_builder.add_channel(
                         self.create_new_delay_channel(
@@ -133,8 +147,6 @@ class Window(QMainWindow):
         distributed_system_builder.check()
 
         self.distributed_system = distributed_system_builder.build()
-
-        self.timer.start(1000)
 
         """
         for i in range(message_delay):
@@ -167,7 +179,7 @@ class Window(QMainWindow):
 
             painter.setBrush(QBrush())
             painter.drawRect(self.all_width - self.menu_width - 1, 0, self.menu_width + 1, self.menu_height + 1)
-            print("Timer pushed")
+            print("Timer pushed" + time.time().__str__())
 
     def paint_process(self, painter, x, y):
         painter.drawEllipse(x, y, self.ellipse_radius, self.ellipse_radius)
@@ -177,13 +189,13 @@ class Window(QMainWindow):
             self.distributed_system.unpause()
             self.stopped = True
             self.stop_algo.setText("Resume")
-            self.timer.stop()
+            #self.timer.stop()
             for message in self.messages:
                 message.stop()
         else:
             self.stopped = False
             self.distributed_system.pause()
-            self.timer.start()
+            #self.timer.start()
             self.stop_algo.setText("Stop")
             for message in self.messages:
                 message.resume()
@@ -298,13 +310,34 @@ class Window(QMainWindow):
             self.labels.append(label)
 
     def add_message(self, message: QMessage):
-        self.messages.append(message)
-        message.set_size([self.window_width, self.all_height])
+        print("Message added " + str(message))
+        anim = message.build_animation()
+        #anim.setDuration(40000)
         self.layout().addWidget(message)
+        self.anims.append(anim)
+        anim.start()
+        """
+        message.is_deleted.connect(lambda: self.remove_message(message))
+        message.set_size([self.window_width, self.all_height])
+        message.build_animation()
+        self.messages.append(message)
+        self.setUpdatesEnabled(False)
+        self.layout().addWidget(message)
+        self.setUpdatesEnabled(True)
+        self.animation_group.addAnimation(message.get_animation())
+        message.animate()
+        """
 
     def start_algorithm(self):
         if self.distributed_system:
             self.distributed_system.start()
+
+    def remove_message(self, message):
+        print("Message removed " + str(message))
+        self.messages.remove(message)
+        self.layout().removeWidget(message)
+        print("Messages: ")
+        print(self.messages)
 
     def get_execution(self):
         pass
@@ -322,6 +355,16 @@ class Window(QMainWindow):
                     self.lines.append(l)
                     painter.drawLine(l)
 
+    def test(self):
+        for j in range(70):
+            message = QMessage(randint(0, 3), randint(0,3), 5)
+            message.set_size([self.window_width, self.all_height])
+            message.set_graph(self.vertexes)
+            self.add_message(message)
+
+    def start_test(self):
+        for anim in self.anims:
+            anim.start()
 
 def application_start():
     app = QApplication(sys.argv)

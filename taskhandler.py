@@ -29,7 +29,9 @@ class TaskHandler:
         return None
 
     def start(self):
-        self.looper.do_loop()
+        if self.is_finished is None:
+            self.is_finished = False
+            self.looper.do_loop()
 
     def pause(self):
         self.task_scheduler.stop()

@@ -111,7 +111,7 @@ class QThreadLooper(Looper):
         self.lock = Lock()
         self.is_finished = None
         self.is_paused = None
-        self.thread = QThread()
+        self.thread = QThreadLooper.WorkerThread(self)
 
     def exit_loop(self):
         with self.lock:

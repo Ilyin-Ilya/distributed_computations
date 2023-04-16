@@ -14,8 +14,6 @@ class DistributedSystem:
 
     def __init__(self, communication_helper=None):
         self.main_task_handler: TaskHandler | None = None  # DistributedSystem's handler to avoid main thread blocking
-        self.channels_task_handler: TaskHandler | None = None
-        self.processors: TaskHandler | None = None
         self.has_started = False
         if communication_helper:
             self.communication_helper = communication_helper
