@@ -149,7 +149,7 @@ class QMessage(QWidget):
 
 
     def paintEvent(self, event):
-        print("Paint called")
+        #print("Paint called")
         if self._position is not None:
                 painter = QPainter(self)
                 painter.setRenderHint(QPainter.Antialiasing)
@@ -197,8 +197,8 @@ class QMessage(QWidget):
 
     def draw_message(self, painter):
         envelope_path = QPainterPath()
-        print("Position! ")
-        print(self._position)
+        #print("Position! ")
+        #print(self._position)
         #painter.drawRect(self._position.x(), self._position.y(), self._position.x() - 20, self._position.y() - 20)
 
         envelope_path.moveTo(self._position.x(), self._position.y())
@@ -235,8 +235,8 @@ class QMessage(QWidget):
         return self._position
 
     def set_position(self, position):
-        print("Position ")
-        print(position)
+        #print("Position ")
+        #print(position)
         self._position = position
         self.update()
 
