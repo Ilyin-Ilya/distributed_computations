@@ -87,6 +87,7 @@ class Window(QMainWindow):
             message_info.get_total_delay(),
         )
         qmessage.set_graph(self.vertexes)
+        qmessage.set_size([self.window_width, self.all_height])
         self.add_message(qmessage)
 
     def create_new_delay_channel(self, sender_id, receiver_id, delay_range) -> MessageInfoDelayChannel:
@@ -312,8 +313,9 @@ class Window(QMainWindow):
         print(f"Message added at time {time.time()} from {message.sender} to {message.recipient}")
         print("************")
         anim = message.build_animation()
-        # anim.setDuration(40000)
         self.layout().addWidget(message)
+        anim.finished.connect(lambda : self.remove_message(message, anim))
+        # anim.setDuration(40000)
         self.anims.append(anim)
         anim.start()
         """
@@ -332,10 +334,12 @@ class Window(QMainWindow):
         if self.distributed_system:
             self.distributed_system.start()
 
-    def remove_message(self, message):
+    def remove_message(self, message, anim):
         print("Message removed " + str(message))
-        self.messages.remove(message)
+        #self.messages.remove(message)
         self.layout().removeWidget(message)
+        anim.deleteLater()
+        message.deleteLater()
         print("Messages: ")
         print(self.messages)
 
