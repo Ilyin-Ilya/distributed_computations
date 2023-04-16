@@ -39,7 +39,7 @@ class MessageInfoDelayChannel(AbstractChannel):
                  receiver_id,
                  delay_range,
                  message_info_callback,
-                 task_handler: TaskHandler
+                 task_handler: TaskHandler | None
                  ):
         super().__init__(task_handler)
         self.sender_id = sender_id

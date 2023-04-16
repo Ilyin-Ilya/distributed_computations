@@ -77,7 +77,7 @@ class Window(QMainWindow):
             receiver_id,
             delay_range,
             self.get_message_callback,
-            self.channel_task_handler
+            None
         )
         return channel
 
@@ -109,27 +109,30 @@ class Window(QMainWindow):
         self.paint_menu_window()
         self.timer = QTimer()
         self.timer.timeout.connect(self.update)
-        distributed_system_buidler = DistributedSystemBuilder()
+        distributed_system_builder = \
+            DistributedSystemBuilder() \
+                .enable_one_thread_model(True) \
+                .set_async_model(DistributedSystemBuilder.LooperType.QThread, 10)
 
         for i in range(len(data)):
-            distributed_system_buidler.add_process(
-                ExampleEchoProcess(i, i == 0)
+            distributed_system_builder.add_process(
+                ExampleEchoProcess(i, None, i == 0)
             )
             for j in range(len(data[i])):
                 if data[i][j] == 1:
-                    distributed_system_buidler.add_channel(
+                    distributed_system_builder.add_channel(
                         self.create_new_delay_channel(
                             i,
                             j,
-                            [4,5]
+                            [4, 5]
                         ),
                         i,
                         j
                     )
 
-        distributed_system_buidler.check()
+        distributed_system_builder.check()
 
-        self.distributed_system = distributed_system_buidler.build()
+        self.distributed_system = distributed_system_builder.build()
 
         self.timer.start(1000)
 

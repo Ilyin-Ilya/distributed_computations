@@ -1,20 +1,20 @@
 from typing import Callable
 from multiprocessing import Process, Lock
 from task_scheduler import TaskScheduler, Task, TaskInfo, TimingTaskScheduler
+from looper import Looper
 
 
 class TaskHandler:
-    def __init__(self, task_scheduler: TaskScheduler = TimingTaskScheduler(), name=""):
+    def __init__(self, looper: Looper, task_scheduler: TaskScheduler = TimingTaskScheduler(), name=""):
         self.name = name
         self.task_scheduler = task_scheduler
+        self.looper: Looper = looper
+        self.looper.set_loop_action(self.__loop_action__)
         self.is_instant_stop = False
-        self.task_lock = Lock()
-        self.start_lock = Lock()
-        self.process: Process = Process(target=self.__start_action__)
         self.is_finished = None
 
     def wait(self):
-        self.process.join()
+        self.looper.wait()
 
     def schedule_action(self, action: Callable, delay: float = None) -> TaskInfo:
         task = Task(
@@ -29,10 +29,7 @@ class TaskHandler:
         return None
 
     def start(self):
-        with self.start_lock:
-            if self.is_finished is None:
-                self.is_finished = False
-                self.process.start()
+        self.looper.do_loop()
 
     def pause(self):
         self.task_scheduler.stop()
@@ -40,10 +37,12 @@ class TaskHandler:
     def unpause(self):
         self.task_scheduler.start()
 
-    def __start_action__(self):
-        while (self.task_scheduler.has_task_to_do() or not self.is_finished) \
+    def __loop_action__(self):
+        if (self.task_scheduler.has_task_to_do() or not self.is_finished) \
                 and not self.is_instant_stop:
             self.task_scheduler.do_tasks()
+        else:
+            self.looper.exit_loop()
 
     def stop(self):
         self.is_finished = True

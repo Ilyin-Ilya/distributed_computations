@@ -3,6 +3,8 @@ from distributed_objects.channel import AbstractChannel
 from typing import List
 from distributed_objects.process import ChannelCommunicationProvider, AbstractProcess
 from configuration_objects.communication_helper import CommunicationHelper
+from looper import ProcessLooper, QThreadLooper, ThreadLooper
+from enum import Enum
 
 
 class DistributedSystem:
@@ -11,7 +13,10 @@ class DistributedSystem:
     """
 
     def __init__(self, communication_helper=None):
-        self.main_task_handler = TaskHandler()  # DistributedSystem's handler to avoid main thread blocking
+        self.main_task_handler: TaskHandler | None = None  # DistributedSystem's handler to avoid main thread blocking
+        self.channels_task_handler: TaskHandler | None = None
+        self.processors: TaskHandler | None = None
+        self.has_started = False
         if communication_helper:
             self.communication_helper = communication_helper
         else:
@@ -49,14 +54,19 @@ class DistributedSystem:
         self.main_task_handler.start()
         init_processes = [proc for proc in self.communication_helper.get_all_processes() if proc.is_init_process()]
 
-        for proc in init_processes:
-            proc.receive_message(AbstractProcess.kick_off_message)
+        def component_start():
+            for proc in init_processes:
+                proc.receive_message(AbstractProcess.kick_off_message)
 
-        for process in self.communication_helper.get_all_processes():
-            process.start()
+            for process in self.communication_helper.get_all_processes():
+                process.start()
 
-        for channel in self.communication_helper.get_all_channels():
-            channel.start()
+            for channel in self.communication_helper.get_all_channels():
+                channel.start()
+
+        if not self.has_started:
+            self.has_started = True
+            self.main_task_handler.schedule_action(component_start)
 
     def get_snapshot(self):
         self.pause()
@@ -173,12 +183,39 @@ class DistributedSystem:
 
 
 class DistributedSystemBuilder:
+    class LooperType(Enum):
+        Thread = 1
+        QThread = 2
+        Process = 3
+
     def __init__(self):
         self.communication_helper = CommunicationHelper()
         self.distributed_system = DistributedSystem(self.communication_helper)
+        self.one_thread_model = False
+        self.thread_per_channel_model = True
+        self.thread_per_process = True
+        self.looper_type = DistributedSystemBuilder.LooperType.QThread
+        self.loop_delay_ms = 10
 
     def check(self):
         self.communication_helper.check_is_everything_ok(True)
+        return self
+
+    def enable_one_thread_model(self, is_enabled):
+        self.one_thread_model = is_enabled
+        return self
+
+    def enable_thread_per_channel_model(self, is_enabled):
+        self.thread_per_channel_model = is_enabled
+        return self
+
+    def enable_thread_per_process(self, is_enabled):
+        self.thread_per_process = is_enabled
+        return self
+
+    def set_async_model(self, loop_type, loop_delay_ms: int | None):
+        self.loop_delay_ms = loop_delay_ms
+        self.looper_type = loop_type
         return self
 
     def add_channel(self, channel: AbstractChannel, sender_id, receiver_id):
@@ -199,5 +236,41 @@ class DistributedSystemBuilder:
         self.communication_helper.parse_graph(path)
         return self
 
+    def __get_new_looper__(self):
+        if self.looper_type == DistributedSystemBuilder.LooperType.QThread:
+            return QThreadLooper(self.loop_delay_ms)
+        elif self.looper_type == DistributedSystemBuilder.LooperType.Thread:
+            return ThreadLooper(self.loop_delay_ms)
+        else:
+            return ProcessLooper(self.loop_delay_ms)
+
+    def __get_new_task_handler__(self) -> TaskHandler:
+        looper = self.__get_new_looper__()
+        return TaskHandler(looper)
+
     def build(self) -> DistributedSystem:
+        main_task_handler = self.__get_new_task_handler__()
+        self.distributed_system.main_task_handler = main_task_handler
+        if self.one_thread_model:
+            for proc in self.communication_helper.get_all_processes():
+                proc.set_task_handler(None)
+            for channel in self.communication_helper.get_all_channels():
+                channel.set_task_handler(main_task_handler)
+        else:
+            if self.thread_per_process:
+                for proc in self.communication_helper.get_all_processes():
+                    proc_task_handler = self.__get_new_task_handler__()
+                    proc.set_task_handler(proc_task_handler)
+            else:
+                for proc in self.communication_helper.get_all_processes():
+                    proc.set_task_handler(None)
+
+            if self.thread_per_channel_model:
+                for channel in self.communication_helper.get_all_channels():
+                    channel_task_handler = self.__get_new_task_handler__()
+                    channel.set_task_handler(channel_task_handler)
+            else:
+                for channel in self.communication_helper.get_all_channels():
+                    channel.set_task_handler(main_task_handler)
+
         return self.distributed_system

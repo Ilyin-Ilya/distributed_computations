@@ -10,6 +10,9 @@ class AbstractChannel:
         self.handler_lock = Lock()
         self.task_handler = task_handler
 
+    def set_task_handler(self, task_handler: TaskHandler | None):
+        self.task_handler = task_handler
+
     def deliver_message(self, send_message_callback, message):
         pass
 
@@ -55,7 +58,7 @@ class AbstractChannel:
 
 
 class SimpleDelayChannel(AbstractChannel):
-    def __init__(self, delay_range, task_handler: TaskHandler):
+    def __init__(self, delay_range, task_handler: TaskHandler | None):
         super().__init__(task_handler)
         self.delay_range = delay_range
         self.is_enabled = True
@@ -88,6 +91,9 @@ class ChannelWrapper(AbstractChannel):
         self.inner_channel = channel
         self.sender_id = sender_id
         self.receiver_id = receiver_id
+
+    def set_task_handler(self, task_handler: TaskHandler | None):
+        self.inner_channel.set_task_handler(task_handler)
 
     def get_sender_id(self):
         return self.sender_id

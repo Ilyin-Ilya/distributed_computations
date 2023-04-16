@@ -18,6 +18,9 @@ class AbstractProcess:
         self.is_enabled = True
         self.is_disabled_lock = Lock()
 
+    def set_task_handler(self, task_handler: TaskHandler | None):
+        self.task_handler = task_handler
+
     def set_channel_communication_provider(self, channel_communication_provider: ChannelCommunicationProvider):
         self.channel_communication_provider = channel_communication_provider
 
@@ -93,8 +96,8 @@ class AbstractProcess:
 
 
 class SimpleEchoProcess(AbstractProcess):
-    def __init__(self, process_id, task_handler: TaskHandler = TaskHandler("Channel")):
-        super().__init__()
+    def __init__(self, process_id, task_handler: TaskHandler | None):
+        super().__init__(task_handler)
         self.process_id = process_id
 
     def get_id(self):
@@ -116,7 +119,7 @@ from time import time
 
 
 class ExampleEchoProcess(AbstractProcess):
-    def __init__(self, process_id, task_handler: TaskHandler = TaskHandler("Channel"), is_init=False):
+    def __init__(self, process_id, task_handler: TaskHandler | None, is_init=False):
         super().__init__(task_handler)
         self.process_id = process_id
         self.is_init = is_init
