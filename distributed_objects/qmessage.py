@@ -246,7 +246,7 @@ class QMessage(QWidget):
         self.anim = QPropertyAnimation(self, b'position')
         self.anim.setStartValue(self.graph[self.sender])
         self.anim.setEndValue(self.graph[self.recipient])
-        self.anim.setDuration(10000)
+        self.anim.setDuration(1000 * self.delay)
         return self.anim
 
     def get_animation(self):
