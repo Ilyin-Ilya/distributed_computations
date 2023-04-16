@@ -137,7 +137,7 @@ class Window(QMainWindow):
                         self.create_new_delay_channel(
                             i,
                             j,
-                            [4, 5]
+                            [7, 9]
                         ),
                         i,
                         j

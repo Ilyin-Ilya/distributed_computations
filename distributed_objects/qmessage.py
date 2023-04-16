@@ -105,7 +105,7 @@ class QMessage(QWidget):
 
     def __init__(self, sender, recipient, delay, parent=None):
         super(QMessage, self).__init__(parent)
-        self.delay = int(delay) - 1
+        self.delay = delay
         self.setParent(parent)
         self.sender = sender
         self.recipient = recipient
@@ -246,7 +246,7 @@ class QMessage(QWidget):
         self.anim = QPropertyAnimation(self, b'position')
         self.anim.setStartValue(self.graph[self.sender])
         self.anim.setEndValue(self.graph[self.recipient])
-        self.anim.setDuration(1000 * self.delay)
+        self.anim.setDuration(int(1000 * self.delay))
         return self.anim
 
     def get_animation(self):
