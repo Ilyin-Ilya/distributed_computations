@@ -13,6 +13,7 @@ import time
 import csv
 import os
 import sys
+import re
 from distibuted_system import DistributedSystem, DistributedSystemBuilder
 from distributed_objects.qmessage import MessageInfoDelayChannel, MessageInfo, QMessage
 from distributed_objects.process import ExampleEchoProcess
@@ -121,33 +122,6 @@ class Window(QMainWindow):
         self.paint_menu_window()
         # self.test()
         # self.start_test()
-        distributed_system_builder = DistributedSystemBuilder() \
-            .enable_one_thread_model(True) \
-            .set_async_model(DistributedSystemBuilder.LooperType.QThread, 10)
-
-        for i in range(len(data)):
-            distributed_system_builder.add_process(
-                EchoAlgorithmProcess(i, None, i == 0)
-                #ExampleEchoProcess(i, None, i == 0)
-            )
-            for j in range(len(data[i])):
-                if i == j:
-                    continue
-                if data[i][j] == 1:
-                    distributed_system_builder.add_channel(
-                        self.create_new_delay_channel(
-                            i,
-                            j,
-                            [2, 4]
-                        ),
-                        i,
-                        j
-                    )
-
-        distributed_system_builder.check()
-
-        self.distributed_system = distributed_system_builder.build()
-
         """
         for i in range(message_delay):
             if not self.stopped:
@@ -336,6 +310,36 @@ class Window(QMainWindow):
         """
 
     def start_algorithm(self):
+        distributed_system_builder = DistributedSystemBuilder() \
+            .enable_one_thread_model(True) \
+            .set_async_model(DistributedSystemBuilder.LooperType.QThread, 10)
+
+        print("LOL")
+        print(self.initiator_selected.currentText().split(" ")[1])
+
+        for i in range(len(self.graph)):
+            distributed_system_builder.add_process(
+                EchoAlgorithmProcess(i, None, i == int(self.initiator_selected.currentText().split(" ")[1]))
+                # ExampleEchoProcess(i, None, i == 0)
+            )
+            for j in range(len(self.graph[i])):
+                if i == j:
+                    continue
+                if self.graph[i][j] == 1:
+                    distributed_system_builder.add_channel(
+                        self.create_new_delay_channel(
+                            i,
+                            j,
+                            [5, 7]
+                        ),
+                        i,
+                        j
+                    )
+
+        distributed_system_builder.check()
+
+        self.distributed_system = distributed_system_builder.build()
+
         if self.distributed_system:
             self.distributed_system.start()
 
