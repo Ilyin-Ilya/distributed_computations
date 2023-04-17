@@ -1,9 +1,11 @@
 from task_handler.taskhandler import TaskHandler, Task
+from task_handler.task_scheduler import TaskWrapper
 from distributed_objects.channel import AbstractChannel
 from typing import List
 from distributed_objects.process import ChannelCommunicationProvider, AbstractProcess
 from configuration_objects.communication_helper import CommunicationHelper
 from task_handler.looper import ProcessLooper, QThreadLooper, ThreadLooper
+from threading import Lock
 from enum import Enum
 
 
@@ -15,6 +17,8 @@ class DistributedSystem:
     def __init__(self, communication_helper=None):
         self.main_task_handler: TaskHandler | None = None  # DistributedSystem's handler to avoid main thread blocking
         self.has_started = False
+        self.execution_log_lock = Lock()
+        self.execution_log = ()
         if communication_helper:
             self.communication_helper = communication_helper
         else:
@@ -63,6 +67,7 @@ class DistributedSystem:
                 channel.start()
 
         if not self.has_started:
+            self.__clear_execution_log__()
             self.has_started = True
             self.main_task_handler.schedule_action(component_start)
 
@@ -111,54 +116,93 @@ class DistributedSystem:
     def __set_communication_graph__(self, path):
         self.communication_helper.parse_graph(path)
 
-    def __schedule_instant_task__(self, action):
-        task = Task(
-            action,
-            None
-        )
-        self.main_task_handler.schedule_task(task)
+    def __clear_execution_log__(self):
+        with self.execution_log_lock:
+            self.execution_log = ()
 
-    def __create_channel_message_callback__(self, receiver_id):
-        """
-        callback to send message to process
-        :param receiver_id: id of a process which should receive the message
-        :return: callback to communicate with distributed system in proper way
-        """
+    def __add_execution_log__(self, value):
+        with self.execution_log_lock:
+            self.execution_log = self.execution_log + (value,)
 
-        def send_to_process(message):
-            process = self.communication_helper.get_process_with_id(receiver_id)
+    def get_execution_log(self):
+        return self.execution_log
+
+    def __schedule_instant_task__(self, task: Task):
+        if isinstance(task, DistributedSystem.MessageSendTask):
+            task_to_schedule = TaskWrapper(
+                task,
+                lambda: self.__add_execution_log__(
+                    f"Process {task.sender_id} send to {task.receiver_id} message: {task.message}"
+                )
+            )
+        elif isinstance(task, DistributedSystem.MessageReceiveTask):
+            task_to_schedule = TaskWrapper(
+                task,
+                lambda: self.__add_execution_log__(
+                    f"Process {task.receiver_id} received from {task.sender_id} message: {task.message}"
+                )
+            )
+        else:
+            task_to_schedule = task
+
+        self.main_task_handler.schedule_task(task_to_schedule)
+
+    class MessageReceiveTask(Task):
+        def __init__(self,
+                     distributed_system,
+                     sender_id,
+                     receiver_id,
+                     message,
+                     ):
+            self.distributed_system = distributed_system
+            self.sender_id = sender_id
+            self.receiver_id = receiver_id
+            self.message = message
+            self.action = self.__receive_message__
+
+        def __receive_message__(self):
+            process = self \
+                .distributed_system \
+                .communication_helper \
+                .get_process_with_id(self.receiver_id)
             if process is None:
                 return
-            process.receive_message(message)
+            process.receive_message(self.message)
 
-        def callback(message):
-            self.__schedule_instant_task__(
-                lambda: send_to_process(message)
-            )
+    class MessageSendTask(Task):
+        def __init__(self,
+                     distributed_system,
+                     sender_id,
+                     receiver_id,
+                     message,
+                     ):
+            self.distributed_system = distributed_system
+            self.sender_id = sender_id
+            self.receiver_id = receiver_id
+            self.message = message
+            self.action = self.try_send_message
 
-        return callback
+        def try_send_message(self) -> bool:
+            communication_channel = self \
+                .distributed_system \
+                .communication_helper \
+                .get_channel_for(self.sender_id, self.receiver_id)
 
-    def __schedule_send_message_channel__(self, sender_id, receiver_id, message):
-        """
-        simulation of message delivery inside channel
-        tries to find proper communication channel and simulate delivery
-        :param sender_id: id of sender process
-        :param receiver_id: id of receiver process
-        :param message: message to deliver
-        """
-
-        def try_send_message() -> bool:
-            communication_channel = self.communication_helper.get_channel_for(sender_id, receiver_id)
             if not isinstance(communication_channel, AbstractChannel):
                 return False
 
             communication_channel.deliver_message(
-                self.__create_channel_message_callback__(receiver_id),
-                message
+                lambda message: self.distributed_system.__schedule_instant_task__(
+                    DistributedSystem.MessageReceiveTask(
+                        self.distributed_system,
+                        self.sender_id,
+                        self.receiver_id,
+                        message
+                    )
+                ),
+                self.message
             )
             return True
-
-        self.__schedule_instant_task__(try_send_message)
 
     class ChannelCommunicationProviderImpl(ChannelCommunicationProvider):
         def __init__(self, distributed_system, sender_id):
@@ -171,8 +215,9 @@ class DistributedSystem:
             )
 
         def send_message(self, receiver_id, message) -> None:
-            self.distributed_system.main_task_handler.schedule_action(
-                lambda: self.distributed_system.__schedule_send_message_channel__(
+            self.distributed_system.__schedule_instant_task__(
+                DistributedSystem.MessageSendTask(
+                    self.distributed_system,
                     self.sender_id,
                     receiver_id,
                     message

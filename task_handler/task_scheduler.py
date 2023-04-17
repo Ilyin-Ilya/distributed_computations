@@ -12,6 +12,18 @@ class Task:
     delay: float | None = None
 
 
+class TaskWrapper(Task):
+    def __init__(self, task: Task, extra_action: Callable):
+        self.__task__ = task
+        self.delay = task.delay
+        self.action = self.__action__
+        self.extra_action = extra_action
+
+    def __action__(self):
+        self.__task__.action()
+        self.extra_action()
+
+
 class TaskInfo:
     def __init__(self):
         self.__is_done__: bool = False
@@ -238,7 +250,7 @@ class InstantTaskScheduler(TaskScheduler):
 
     def do_tasks(self):
         self.__synchronize_pending_tasks__()
-        task_info = None if not self.task_heap  else heapq.heappop(self.task_heap)
+        task_info = None if not self.task_heap else heapq.heappop(self.task_heap)
 
         if task_info and task_info.is_scheduled() and not task_info.is_done():
             if self.local_clocks <= task_info.__delay_end_time__:

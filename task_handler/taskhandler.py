@@ -1,5 +1,4 @@
 from typing import Callable
-from multiprocessing import Process, Lock
 from task_handler.task_scheduler import TaskScheduler, Task, TaskInfo, TimingTaskScheduler
 from task_handler.looper import Looper
 

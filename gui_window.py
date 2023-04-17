@@ -178,7 +178,7 @@ class Window(QMainWindow):
 
             painter.setBrush(QBrush())
             painter.drawRect(self.all_width - self.menu_width - 1, 0, self.menu_width + 1, self.menu_height + 1)
-            #print("Timer pushed" + time.time().__str__())
+            # print("Timer pushed" + time.time().__str__())
 
     def paint_process(self, painter, x, y):
         painter.drawEllipse(x, y, self.ellipse_radius, self.ellipse_radius)
@@ -316,7 +316,7 @@ class Window(QMainWindow):
         print("************")
         anim = message.build_animation()
         self.layout().addWidget(message)
-        anim.finished.connect(lambda : self.remove_message(message, anim))
+        anim.finished.connect(lambda: self.remove_message(message, anim))
         # anim.setDuration(40000)
         self.anims.append(anim)
         anim.start()
@@ -340,7 +340,7 @@ class Window(QMainWindow):
 
     def remove_message(self, message, anim):
         print("Message removed " + str(message))
-        #self.messages.remove(message)
+        # self.messages.remove(message)
         self.layout().removeWidget(message)
         self.anims.remove(anim)
         anim.deleteLater()
@@ -355,17 +355,17 @@ class Window(QMainWindow):
 
         # Set the text edit widget as the central widget of the sub-window
         execution_log = QTextEdit(self)
-        for str in strings:
-            execution_log.append(str)
+        execution_log.clear()
+        for log in self.distributed_system.get_execution_log():
+            execution_log.append(log)
         sub_window.layout().addWidget(execution_log)
 
         sub_window.setCentralWidget(execution_log)
         execution_log.setFixedSize(400, 500)
         sub_window.setWindowTitle("Distributed executions log")
-        sub_window.move(int(self.all_width / 2) - 200, int(self.all_height/2) - 250)
+        sub_window.move(int(self.all_width / 2) - 200, int(self.all_height / 2) - 250)
         sub_window.setFixedSize(400, 500)
         sub_window.show()
-
 
     def paint_graph(self, painter):
         for vertex in self.vertexes:
