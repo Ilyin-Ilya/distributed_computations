@@ -16,7 +16,7 @@ import sys
 from distibuted_system import DistributedSystem, DistributedSystemBuilder
 from distributed_objects.qmessage import MessageInfoDelayChannel, MessageInfo, QMessage
 from distributed_objects.process import ExampleEchoProcess
-from task_handler.taskhandler import TaskHandler
+from algorithms.distributed_algorithms import EchoAlgorithmProcess
 
 
 class Window(QMainWindow):
@@ -127,7 +127,8 @@ class Window(QMainWindow):
 
         for i in range(len(data)):
             distributed_system_builder.add_process(
-                ExampleEchoProcess(i, None, i == 0)
+                EchoAlgorithmProcess(i, None, i == 0)
+                #ExampleEchoProcess(i, None, i == 0)
             )
             for j in range(len(data[i])):
                 if i == j:
@@ -137,7 +138,7 @@ class Window(QMainWindow):
                         self.create_new_delay_channel(
                             i,
                             j,
-                            [5, 8]
+                            [2, 4]
                         ),
                         i,
                         j
@@ -349,7 +350,8 @@ class Window(QMainWindow):
         print(self.messages)
 
     def get_execution(self):
-        self.on_stop_click()
+        if not self.stopped:
+            self.on_stop_click()
         strings = ["first", "second", "third"]
         sub_window = QMainWindow(self)
 

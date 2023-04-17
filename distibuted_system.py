@@ -17,6 +17,7 @@ class DistributedSystem:
     def __init__(self, communication_helper=None):
         self.main_task_handler: TaskHandler | None = None  # DistributedSystem's handler to avoid main thread blocking
         self.has_started = False
+        self.is_paused = False
         self.execution_log_lock = Lock()
         self.execution_log = ()
         if communication_helper:
@@ -25,6 +26,7 @@ class DistributedSystem:
             self.communication_helper = CommunicationHelper()
 
     def pause(self):
+        self.is_paused = True
         self.main_task_handler.pause()
         for process in self.communication_helper.get_all_processes():
             process.pause()
@@ -39,6 +41,8 @@ class DistributedSystem:
 
         for channel in self.communication_helper.get_all_channels():
             channel.unpause()
+
+        self.is_paused = False
 
     def stop(self, is_instant=False):
         for process in self.communication_helper.get_all_processes():
@@ -72,12 +76,14 @@ class DistributedSystem:
             self.main_task_handler.schedule_action(component_start)
 
     def get_snapshot(self):
+        was_paused = self.is_paused
         self.pause()
         channels_information = [channel.get_current_state_information() for channel in
                                 self.communication_helper.get_all_channels()]
         process_information = [proc.get_current_state_information() for proc in
                                self.communication_helper.get_all_processes()]
-        self.unpause()
+        if not was_paused:
+            self.unpause()
 
         return process_information, channels_information
 
@@ -125,7 +131,15 @@ class DistributedSystem:
             self.execution_log = self.execution_log + (value,)
 
     def get_execution_log(self):
-        return self.execution_log
+        process_states, _ = self.get_snapshot()
+        log = self.execution_log
+        if process_states:
+            log += ("*************PROCESS STATES************",)
+        for proc_state in process_states:
+            log += (proc_state,)
+        if process_states:
+            log += ("***************************************",)
+        return log
 
     def __schedule_instant_task__(self, task: Task):
         if isinstance(task, DistributedSystem.MessageSendTask):
