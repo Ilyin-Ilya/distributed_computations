@@ -71,16 +71,6 @@ class Window(QMainWindow):
 
         self.central_widget = QWidget()
 
-        """
-        for i in range(5):
-            self.label_1 = QLabel('round label', self)
-            # moving position
-            self.label_1.move(100 * i , 100 * i)
-            self.label_1.resize(80, 80)
-            self.labels
-        self.window.show()
-        """
-
     def create_qmessage(self, message_info: MessageInfo):
         qmessage = QMessage(
             message_info.get_sender_id(),
@@ -120,25 +110,6 @@ class Window(QMainWindow):
         self.is_graph_uploaded = True
         self.fill_labels()
         self.paint_menu_window()
-        # self.test()
-        # self.start_test()
-        """
-        for i in range(message_delay):
-            if not self.stopped:
-                self.update()
-                QApplication.processEvents()
-                """
-
-        # timer = QTimer(self)
-        # timer.setSingleShot(True)
-        # self.layout().removeWidget(message)
-        # Connect the timer's timeout signal to a function that will remove the widget
-        # timer.timeout.connect(lambda : self.layout().removeWidget(message))
-
-        # Start the timer with a 2 second delay
-        # timer.start(4000)
-
-        # self.paint_message_traversal(message_delay, 1, 2)
 
     def show(self):
         super().show()
@@ -292,22 +263,10 @@ class Window(QMainWindow):
         anim = message.build_animation()
         self.layout().addWidget(message)
         anim.finished.connect(lambda: self.remove_message(message, anim))
-        # anim.setDuration(40000)
         self.anims.append(anim)
         anim.start()
         if self.stopped:
             anim.pause()
-        """
-        message.is_deleted.connect(lambda: self.remove_message(message))
-        message.set_size([self.window_width, self.all_height])
-        message.build_animation()
-        self.messages.append(message)
-        self.setUpdatesEnabled(False)
-        self.layout().addWidget(message)
-        self.setUpdatesEnabled(True)
-        self.animation_group.addAnimation(message.get_animation())
-        message.animate()
-        """
 
     def start_algorithm(self):
         distributed_system_builder = DistributedSystemBuilder() \
@@ -354,24 +313,25 @@ class Window(QMainWindow):
         print(self.messages)
 
     def get_execution(self):
-        if not self.stopped:
-            self.on_stop_click()
-        strings = ["first", "second", "third"]
-        sub_window = QMainWindow(self)
+        if self.distributed_system is not None:
+            if not self.stopped:
+                self.on_stop_click()
+            strings = ["first", "second", "third"]
+            sub_window = QMainWindow(self)
 
-        # Set the text edit widget as the central widget of the sub-window
-        execution_log = QTextEdit(self)
-        execution_log.clear()
-        for log in self.distributed_system.get_execution_log():
-            execution_log.append(log)
-        sub_window.layout().addWidget(execution_log)
+            # Set the text edit widget as the central widget of the sub-window
+            execution_log = QTextEdit(self)
+            execution_log.clear()
+            for log in self.distributed_system.get_execution_log():
+                execution_log.append(log)
+            sub_window.layout().addWidget(execution_log)
 
-        sub_window.setCentralWidget(execution_log)
-        execution_log.setFixedSize(400, 500)
-        sub_window.setWindowTitle("Distributed executions log")
-        sub_window.move(int(self.all_width / 2) - 200, int(self.all_height / 2) - 250)
-        sub_window.setFixedSize(400, 500)
-        sub_window.show()
+            sub_window.setCentralWidget(execution_log)
+            execution_log.setFixedSize(400, 500)
+            sub_window.setWindowTitle("Distributed executions log")
+            sub_window.move(int(self.all_width / 2) - 200, int(self.all_height / 2) - 250)
+            sub_window.setFixedSize(400, 500)
+            sub_window.show()
 
     def paint_graph(self, painter):
         for vertex in self.vertexes:
@@ -385,17 +345,6 @@ class Window(QMainWindow):
                     l = QLine(self.vertexes[i], self.vertexes[j])
                     self.lines.append(l)
                     painter.drawLine(l)
-
-    def test(self):
-        for j in range(70):
-            message = QMessage(randint(0, 3), randint(0, 3), 5)
-            message.set_size([self.window_width, self.all_height])
-            message.set_graph(self.vertexes)
-            self.add_message(message)
-
-    def start_test(self):
-        for anim in self.anims:
-            anim.start()
 
 
 def application_start():
