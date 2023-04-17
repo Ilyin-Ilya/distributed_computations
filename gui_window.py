@@ -2,7 +2,7 @@ from random import random, randrange, randint
 
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDesktopWidget, QFileDialog, QAction, QWidget, QLabel, QComboBox, \
-    QGridLayout, QLineEdit, QGroupBox, QVBoxLayout
+    QGridLayout, QLineEdit, QGroupBox, QVBoxLayout, QTextEdit
 from PyQt5.QtGui import QPainter, QPen, QBrush, QPolygon, QFont, QPainterPath, QColor
 from PyQt5.QtCore import QPoint, QLine, QRect, QLineF, QTimer, QCoreApplication, QThread, pyqtSignal, QMetaObject, \
     QPropertyAnimation, QParallelAnimationGroup
@@ -188,16 +188,18 @@ class Window(QMainWindow):
             self.distributed_system.unpause()
             self.stopped = True
             self.stop_algo.setText("Resume")
-            # self.timer.stop()
             for message in self.messages:
                 message.stop()
+            for anim in self.anims:
+                anim.pause()
         else:
             self.stopped = False
             self.distributed_system.pause()
-            # self.timer.start()
             self.stop_algo.setText("Stop")
             for message in self.messages:
                 message.resume()
+            for anim in self.anims:
+                anim.resume()
 
     def paint_menu_window(self):
         painter = QPainter(self)
@@ -318,6 +320,8 @@ class Window(QMainWindow):
         # anim.setDuration(40000)
         self.anims.append(anim)
         anim.start()
+        if self.stopped:
+            anim.pause()
         """
         message.is_deleted.connect(lambda: self.remove_message(message))
         message.set_size([self.window_width, self.all_height])
@@ -338,13 +342,30 @@ class Window(QMainWindow):
         print("Message removed " + str(message))
         #self.messages.remove(message)
         self.layout().removeWidget(message)
+        self.anims.remove(anim)
         anim.deleteLater()
         message.deleteLater()
         print("Messages: ")
         print(self.messages)
 
     def get_execution(self):
-        pass
+        self.on_stop_click()
+        strings = ["first", "second", "third"]
+        sub_window = QMainWindow(self)
+
+        # Set the text edit widget as the central widget of the sub-window
+        execution_log = QTextEdit(self)
+        for str in strings:
+            execution_log.append(str)
+        sub_window.layout().addWidget(execution_log)
+
+        sub_window.setCentralWidget(execution_log)
+        execution_log.setFixedSize(400, 500)
+        sub_window.setWindowTitle("Distributed executions log")
+        sub_window.move(int(self.all_width / 2) - 200, int(self.all_height/2) - 250)
+        sub_window.setFixedSize(400, 500)
+        sub_window.show()
+
 
     def paint_graph(self, painter):
         for vertex in self.vertexes:
