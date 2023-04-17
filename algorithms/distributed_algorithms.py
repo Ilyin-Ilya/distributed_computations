@@ -32,7 +32,7 @@ class EchoAlgorithmProcess(AbstractProcess):
         return False
 
     def get_current_state_information(self):
-        return f"Node is decided: {self.is_decided}"
+        return f"Node {self.id} is decided: {self.is_decided}"
 
     def _on_receive_message_(self, message: EchoMessage):
         if self.is_decided:
@@ -51,11 +51,11 @@ class EchoAlgorithmProcess(AbstractProcess):
             new_message.counter = message.counter + 1
             new_message.sender = self.id
 
-        if is_first_message:
-            self.send_to_all_neighbours(new_message)
-
         if not self.is_init and self.parent is None:
             self.parent = message.sender
+
+        if is_first_message:
+            self.send_to_all_neighbours(new_message)
 
         self.is_decided = True
         for receiver_id in self.channel_communication_provider.get_available_process_id():
