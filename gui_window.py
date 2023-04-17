@@ -137,7 +137,7 @@ class Window(QMainWindow):
                         self.create_new_delay_channel(
                             i,
                             j,
-                            [7, 9]
+                            [5, 8]
                         ),
                         i,
                         j
@@ -185,7 +185,7 @@ class Window(QMainWindow):
 
     def on_stop_click(self):
         if not self.stopped:
-            self.distributed_system.unpause()
+            self.distributed_system.pause()
             self.stopped = True
             self.stop_algo.setText("Resume")
             for message in self.messages:
@@ -194,7 +194,7 @@ class Window(QMainWindow):
                 anim.pause()
         else:
             self.stopped = False
-            self.distributed_system.pause()
+            self.distributed_system.unpause()
             self.stop_algo.setText("Stop")
             for message in self.messages:
                 message.resume()
