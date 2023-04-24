@@ -42,12 +42,10 @@ class AbstractProcess:
     def get_current_state_information(self):
         return "No state information"
 
-    @final
     def disable(self):
         with self.is_disabled_lock:
             self.is_enabled = False
 
-    @final
     def enable(self):
         with self.is_disabled_lock:
             self.is_enabled = True
@@ -61,22 +59,18 @@ class AbstractProcess:
                 self.task_handler \
                     .schedule_action(lambda: self._on_receive_message_(message))
 
-    @final
     def start(self):
         if self.task_handler is not None:
             self.task_handler.start()
 
-    @final
     def pause(self):
         if self.task_handler is not None:
             self.task_handler.pause()
 
-    @final
     def unpause(self):
         if self.task_handler is not None:
             self.task_handler.unpause()
 
-    @final
     def stop(self, is_instant=False):
         if self.task_handler is not None:
             if is_instant:

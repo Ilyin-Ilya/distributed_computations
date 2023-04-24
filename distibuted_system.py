@@ -61,14 +61,14 @@ class DistributedSystem:
         init_processes = [proc for proc in self.communication_helper.get_all_processes() if proc.is_init_process()]
 
         def component_start():
-            for proc in init_processes:
-                proc.receive_message(AbstractProcess.kick_off_message)
-
             for process in self.communication_helper.get_all_processes():
                 process.start()
 
             for channel in self.communication_helper.get_all_channels():
                 channel.start()
+
+            for proc in init_processes:
+                proc.receive_message(AbstractProcess.kick_off_message)
 
         if not self.has_started:
             self.__clear_execution_log__()
