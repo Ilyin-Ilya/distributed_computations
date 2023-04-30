@@ -17,7 +17,7 @@ import re
 from distibuted_system import DistributedSystem, DistributedSystemBuilder
 from distributed_objects.qmessage import MessageInfoDelayChannel, MessageInfo, QMessage
 from distributed_objects.process import ExampleEchoProcess
-from algorithms.distributed_algorithms import EchoAlgorithmProcess
+from algorithms.distributed_algorithms import EchoAlgorithmProcess, LaiYangAlgorithmProcess
 
 
 class Window(QMainWindow):
@@ -278,7 +278,7 @@ class Window(QMainWindow):
 
         for i in range(len(self.graph)):
             distributed_system_builder.add_process(
-                EchoAlgorithmProcess(i, None, i == int(self.initiator_selected.currentText().split(" ")[1]))
+                LaiYangAlgorithmProcess(i, None, True, i == int(self.initiator_selected.currentText().split(" ")[1]))
                 # ExampleEchoProcess(i, None, i == 0)
             )
             for j in range(len(self.graph[i])):
