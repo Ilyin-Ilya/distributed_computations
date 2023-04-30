@@ -96,7 +96,6 @@ def divide_line(line, n):
             # Add the point to the list
             points.append(position)
 
-    print(points)
     return points
 
 

@@ -273,7 +273,6 @@ class Window(QMainWindow):
             .enable_one_thread_model(True) \
             .set_async_model(DistributedSystemBuilder.LooperType.QThread, 10)
 
-        print("LOL")
         print(self.initiator_selected.currentText().split(" ")[1])
 
         for i in range(len(self.graph)):
@@ -289,7 +288,7 @@ class Window(QMainWindow):
                         self.create_new_delay_channel(
                             i,
                             j,
-                            [5, 7]
+                            [5, 20]
                         ),
                         i,
                         j
@@ -303,14 +302,11 @@ class Window(QMainWindow):
             self.distributed_system.start()
 
     def remove_message(self, message, anim):
-        print("Message removed " + str(message))
         # self.messages.remove(message)
         self.layout().removeWidget(message)
         self.anims.remove(anim)
         anim.deleteLater()
         message.deleteLater()
-        print("Messages: ")
-        print(self.messages)
 
     def get_execution(self):
         if self.distributed_system is not None:
@@ -327,10 +323,10 @@ class Window(QMainWindow):
             sub_window.layout().addWidget(execution_log)
 
             sub_window.setCentralWidget(execution_log)
-            execution_log.setFixedSize(400, 500)
+            execution_log.setFixedSize(500, 700)
             sub_window.setWindowTitle("Distributed executions log")
-            sub_window.move(int(self.all_width / 2) - 200, int(self.all_height / 2) - 250)
-            sub_window.setFixedSize(400, 500)
+            sub_window.move(int(self.all_width / 2) - 250, int(self.all_height / 2) - 350)
+            sub_window.setFixedSize(500, 700)
             sub_window.show()
 
     def paint_graph(self, painter):

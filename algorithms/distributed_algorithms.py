@@ -1,6 +1,6 @@
-from distibuted_system import DistributedSystemBuilder
+from distibuted_system import DistributedSystemBuilder, InternalAction
 from distributed_objects.process import AbstractProcess
-from task_handler.looper import QThreadLooper
+from task_handler.looper import QThreadLooper, ProcessLooper
 from task_handler.taskhandler import TaskHandler
 from dataclasses import dataclass
 import random
@@ -85,9 +85,11 @@ class SnapshotMessage:
         return f"Snapshot message id{self.sender * 100 + self.counter}, snapshot taken {self.is_snapshot_taken}"
 
 
+
 @dataclass
 class ControlMessage:
     sender = 0
+    counter = 0
     messages_sent_before_control = 0
 
     def __str__(self) -> str:
@@ -102,13 +104,17 @@ class LaiYangAlgorithmProcess(AbstractProcess):
         self.is_init = is_init
         self.is_decided = False
         self.snapshot_taken = False
-        self.how_many_messages_send = random.randint(5, 7)
+        self.how_many_messages_send = random.randint(3, 5)
         self.is_initiator = is_initiator
-        looper = QThreadLooper(3)
+        looper = ProcessLooper(5)
         self.event_task_handler = TaskHandler(looper)
         self.neighbours = dict()
+        self.sent_messages = dict()
+        self.collected_snapshots = dict()
         self.messages_set = dict()
         self.is_first_call = True
+        self.event_task_handler.start()
+        self.counter = 0
 
     def get_id(self):
         return self.id
@@ -123,79 +129,98 @@ class LaiYangAlgorithmProcess(AbstractProcess):
         return f"Node {self.id} is decided: {self.is_decided}"
 
     def _on_receive_message_(self, message):
+        if type(message) == InternalAction:
+            return
+
+        if message != AbstractProcess.kick_off_message:
+            print("Node " + str(self.id) + " received from " + str(message.sender) + " " + str(message))
+
+
         if self.is_first_call:
             for receiver_id in self.channel_communication_provider.get_available_process_id():
                 print(receiver_id)
                 self.neighbours[receiver_id] = 0
+                self.sent_messages[receiver_id] = 0
                 self.messages_set[receiver_id] = list()
+                self.collected_snapshots[receiver_id] = False
                 self.is_first_call = False
 
-        self.event_task_handler.start()
-
         if message == AbstractProcess.kick_off_message:
-            print("Received kickoff " + str(self.id))
             if not self.is_init:
                 raise RuntimeError('kick off message for non initiator')
-            counter = 0
             #send random messages to random neighoburs
             for i in range(self.how_many_messages_send):
-                new_message = SnapshotMessage()
-                new_message.sender = self.id
-                new_message.is_snapshot_taken = self.snapshot_taken
-                neighbour_id = random.randint(0, max(self.neighbours.keys()))
-                while neighbour_id == self.id:
-                    neighbour_id = random.randint(0, max(self.neighbours.keys()))
-                print(str(self.id) + " + " + str(neighbour_id))
-
                 self.event_task_handler.schedule_action(
-                        lambda : self.send_usual_message(neighbour_id, new_message, counter),
-                        random.randint(0, 3))
+                        lambda : self.send_usual_message(),
+                        random.randint(0, 20))
 
             #send control message
             if self.is_initiator:
-                print("INITIATED ")
                 self.event_task_handler.schedule_action(
-                        lambda: self.take_snapshot(), 2)
+                        lambda: self.take_snapshot(), 5)
 
         if type(message) == SnapshotMessage:
+            #print(str(message.sender) + " : " + str(self.id) + " + " +str(self.collected_snapshots))
             if message.is_snapshot_taken:
+                self.collected_snapshots[message.sender] = True
                 self.take_snapshot()
-            elif self.snapshot_taken:
+            else:
                 self.messages_set[message.sender].append(message)
                 self.check_for_decided()
 
-        print(str(self.id) + "RECEIVED" + str(message))
         if type(message) == ControlMessage:
-            print(str(self.id) + "RECEIVED CONTROL MESSAGE")
             self.neighbours[message.sender] = message.messages_sent_before_control
+            self.collected_snapshots[message.sender] = True
             self.take_snapshot()
             self.check_for_decided()
 
 
 
     def take_snapshot(self):
-        print(str(self.id ) + "TAKE SNAPSHOT")
         if not self.snapshot_taken:
             self.snapshot_taken = True
-            control_message = ControlMessage()
+            print(self.neighbours)
             for neighbour_id in self.neighbours.keys():
-                control_message.counter = self.neighbours[neighbour_id] + 1
+                control_message = ControlMessage()
+                control_message.messages_sent_before_control = self.sent_messages[neighbour_id] + 1
                 control_message.sender = self.id
+                control_message.counter = self.counter
+                self.counter+=1
+                print("Node " + str(self.id) + " send to " + str(neighbour_id) + " " + str(control_message))
                 self.send_message(neighbour_id, control_message)
 
 
-    def send_usual_message(self, receiver_id, message, counter):
-        print("sending message from " + str(self.id) + " to " + str(receiver_id))
-        message.counter = counter
-        self.send_message(receiver_id, message)
-        counter += 1
-        if not self.snapshot_taken:
-            print(str(self.neighbours) + " : " + str(receiver_id))
-            self.neighbours[receiver_id] += 1
+    def send_usual_message(self):
+        new_message = SnapshotMessage()
+        new_message.sender = self.id
+        neighbour_id = random.randint(0, max(self.neighbours.keys()))
+        while neighbour_id == self.id:
+            neighbour_id = random.randint(0, max(self.neighbours.keys()))
+        print(str(self.id) + " + " + str(neighbour_id))
+
+        new_message.counter = self.counter
+        self.counter += 1
+        new_message.is_snapshot_taken = self.snapshot_taken
+        print("Node " + str(self.id) + " send to " + str(neighbour_id) + " " + str(new_message))
+        self.send_message(neighbour_id, new_message)
+        print(self.collected_snapshots)
+        if not self.collected_snapshots[neighbour_id]:
+            self.sent_messages[neighbour_id] += 1
 
     def check_for_decided(self):
+        print(str(self.id) + str(self.messages_set) + str(self.neighbours))
+        is_decided = True
         for neighbour_id in self.neighbours.keys():
-            if len(self.messages_set[neighbour_id]) == self.neighbours[neighbour_id]:
+            if not (len(self.messages_set[neighbour_id]) + 1 == self.neighbours[neighbour_id] \
+                    and self.collected_snapshots[neighbour_id]):
+                    is_decided = False
+        if is_decided:
+            if not self.is_decided:
+                message = InternalAction()
+                message.action = "Node " + str(self.id) + " has been terminated"
+                print("Node " + str(self.id) + " has been terminated")
+                self.send_message(self.id, message)
                 self.is_decided = True
+                print(self.is_decided)
                 self.event_task_handler.stop()
                 print("STOPPED")

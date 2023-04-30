@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from task_handler.taskhandler import TaskHandler, Task
 from task_handler.task_scheduler import TaskWrapper
 from distributed_objects.channel import AbstractChannel
@@ -8,6 +10,12 @@ from task_handler.looper import ProcessLooper, QThreadLooper, ThreadLooper
 from threading import Lock
 from enum import Enum
 
+@dataclass
+class InternalAction:
+    action = ""
+
+    def __str__(self) -> str:
+        return self.action
 
 class DistributedSystem:
     """
@@ -145,21 +153,37 @@ class DistributedSystem:
         if isinstance(task, DistributedSystem.MessageSendTask):
             task_to_schedule = TaskWrapper(
                 task,
-                lambda: self.__add_execution_log__(
-                    f"Process {task.sender_id} send to {task.receiver_id} message: {task.message}"
-                )
+                lambda: self.print_task_log(task)
             )
         elif isinstance(task, DistributedSystem.MessageReceiveTask):
             task_to_schedule = TaskWrapper(
                 task,
-                lambda: self.__add_execution_log__(
-                    f"Process {task.receiver_id} received from {task.sender_id} message: {task.message}"
-                )
+                lambda: self.print_second_task_log(task)
             )
         else:
             task_to_schedule = task
 
         self.main_task_handler.schedule_task(task_to_schedule)
+
+    def print_task_log(self, task : Task):
+        if isinstance(task.message, InternalAction):
+            self.__add_execution_log__(
+                f"{task.message}"
+            )
+        else:
+            self.__add_execution_log__(
+                f"Process {task.sender_id} send to {task.receiver_id} message: {task.message}"
+            )
+
+    def print_second_task_log(self, task : Task):
+        if isinstance(task.message, InternalAction):
+            self.__add_execution_log__(
+                f"{task.message}"
+            )
+        else:
+            self.__add_execution_log__(
+                f"Process {task.receiver_id} received from {task.sender_id} message: {task.message}"
+            )
 
     class MessageReceiveTask(Task):
         def __init__(self,
